@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>HeadsUp</string>
+    <key>CFBundleDisplayName</key>
+    <string>Heads Up</string>
+    <key>CFBundleIdentifier</key>
+    <string>dev.rufushonour.headsup</string>
+    <key>CFBundleVersion</key>
+    <string>0.1.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleExecutable</key>
+    <string>HeadsUp</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSCalendarsUsageDescription</key>
+    <string>Heads Up reads your calendar events so it can alert you full-screen before each meeting starts.</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>Heads Up reads your calendar events so it can alert you full-screen before each meeting starts.</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Heads Up</string>
+</dict>
+</plist>
