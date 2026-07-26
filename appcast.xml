@@ -1,9 +1,18 @@
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
     <channel>
         <title>Heads Up Changelog</title>
         <link>https://raw.githubusercontent.com/rufushonour/headsup/main/appcast.xml</link>
         <description>Updates to Heads Up.</description>
         <language>en</language>
+        <item>
+            <title>0.1.0</title>
+            <pubDate>Sun, 26 Jul 2026 20:10:02 +0100</pubDate>
+            <sparkle:version>0.1.0</sparkle:version>
+            <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://github.com/rufushonour/headsup/releases/download/v0.1.0/HeadsUp-0.1.0.dmg" length="1798115" type="application/octet-stream" sparkle:edSignature="cA+c+qartsCAREvVChSQ1FUk2gzA1yL7R+Nv12iN0W8/E5S+J/1OPQ8A46N3QuyokvCDZhFgn/BfbpR8iwuIDA=="/>
+        </item>
     </channel>
 </rss>
