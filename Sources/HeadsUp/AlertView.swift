@@ -16,6 +16,7 @@ struct AlertView: View {
 
     @State private var now = Date()
     @State private var appeared = false
+    @State private var showSnoozeOptions = false
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var defaultSnoozeLabel: String {
@@ -45,6 +46,12 @@ struct AlertView: View {
             )
             .ignoresSafeArea()
 
+            if showSnoozeOptions {
+                Color.black.opacity(0.001)
+                    .ignoresSafeArea()
+                    .onTapGesture { showSnoozeOptions = false }
+            }
+
             VStack(spacing: 32) {
                 AppIconBadge(size: 72)
                     .shadow(color: .black.opacity(0.35), radius: 16, y: 8)
@@ -67,7 +74,7 @@ struct AlertView: View {
                         .foregroundColor(.white.opacity(0.55))
                 }
 
-                HStack(spacing: 16) {
+                HStack(alignment: .top, spacing: 16) {
                     if meeting.joinURL != nil {
                         Button(action: onJoin) {
                             Label("Join Meeting", systemImage: "video.fill")
@@ -75,16 +82,45 @@ struct AlertView: View {
                         .buttonStyle(AlertButtonStyle(background: Color(red: 0.20, green: 0.72, blue: 0.36), foreground: .white))
                     }
 
-                    SnoozeSplitButton(
-                        defaultLabel: defaultSnoozeLabel,
-                        onSnooze: { onSnooze(defaultSnoozeSeconds) },
-                        onSnoozeFor: onSnooze
-                    )
+                    ZStack(alignment: .top) {
+                        Button(action: { showSnoozeOptions.toggle() }) {
+                            HStack(spacing: 8) {
+                                Text("Snooze \(defaultSnoozeLabel)")
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .rotationEffect(.degrees(showSnoozeOptions ? 180 : 0))
+                            }
+                        }
+                        .buttonStyle(AlertButtonStyle(background: Color.white.opacity(0.14), foreground: .white))
+
+                        if showSnoozeOptions {
+                            VStack(alignment: .leading, spacing: 0) {
+                                ForEach(snoozeOptions, id: \.seconds) { option in
+                                    Button {
+                                        onSnooze(option.seconds)
+                                        showSnoozeOptions = false
+                                    } label: {
+                                        Text(option.title)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 10)
+                                }
+                            }
+                            .frame(width: 160)
+                            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color(red: 0.16, green: 0.15, blue: 0.24)))
+                            .offset(y: 58)
+                            .zIndex(1)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+                    }
+                    .zIndex(showSnoozeOptions ? 1 : 0)
 
                     Button(action: onDismiss) {
                         Text("Dismiss")
                     }
-                    .buttonStyle(AlertButtonStyle(background: .clear, foreground: .white.opacity(0.65)))
+                    .buttonStyle(AlertButtonStyle(background: Color.white.opacity(0.14), foreground: .white))
                 }
                 .padding(.top, 8)
             }
@@ -98,43 +134,6 @@ struct AlertView: View {
                 appeared = true
             }
         }
-    }
-}
-
-/// A "Snooze 5 min" capsule that snoozes at the configured default on a plain click,
-/// with a small chevron opening a menu to pick a different duration for this alert only.
-private struct SnoozeSplitButton: View {
-    let defaultLabel: String
-    let onSnooze: () -> Void
-    let onSnoozeFor: (TimeInterval) -> Void
-
-    var body: some View {
-        HStack(spacing: 0) {
-            Button(action: onSnooze) {
-                Text("Snooze \(defaultLabel)")
-                    .padding(.leading, 26)
-                    .padding(.trailing, 6)
-                    .padding(.vertical, 14)
-            }
-            .buttonStyle(.plain)
-
-            Menu {
-                ForEach(snoozeOptions, id: \.seconds) { option in
-                    Button(option.title) { onSnoozeFor(option.seconds) }
-                }
-            } label: {
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 11, weight: .bold))
-                    .padding(.trailing, 14)
-                    .padding(.vertical, 14)
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-        }
-        .font(.system(size: 17, weight: .semibold))
-        .foregroundColor(.white)
-        .background(Capsule().fill(Color.white.opacity(0.14)))
     }
 }
 
