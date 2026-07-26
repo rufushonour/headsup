@@ -16,6 +16,10 @@ final class MenuBarController {
     /// Opens the Settings window.
     var onOpenSettings: (() -> Void)?
 
+    /// The one real "fully quit" action, distinct from window closes/Dock Quit which should
+    /// leave the background tray running (see AppDelegate.applicationShouldTerminate).
+    var onQuit: (() -> Void)?
+
     init(calendarService: CalendarService) {
         self.calendarService = calendarService
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -67,7 +71,8 @@ final class MenuBarController {
 
         menu.addItem(.separator())
 
-        let quit = NSMenuItem(title: "Quit Heads Up", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let quit = NSMenuItem(title: "Quit Heads Up", action: #selector(quitApp), keyEquivalent: "q")
+        quit.target = self
         menu.addItem(quit)
 
         return menu
@@ -85,5 +90,9 @@ final class MenuBarController {
 
     @objc private func openSettings() {
         onOpenSettings?()
+    }
+
+    @objc private func quitApp() {
+        onQuit?()
     }
 }
