@@ -18,9 +18,15 @@ final class CalendarService: ObservableObject {
     @Published private(set) var nextMeeting: UpcomingMeeting?
     @Published private(set) var availableCalendars: [EKCalendar] = []
 
-    /// How long before an event's start time the alert should fire.
+    /// How long before an event's start time the alert should fire, unless a
+    /// calendar-specific override applies (see `calendarLeadTimeOverrides`).
     var leadTime: TimeInterval {
         didSet { UserDefaults.standard.set(leadTime, forKey: "alertLeadTimeSeconds") }
+    }
+
+    /// How long a snoozed alert waits before re-firing.
+    var snoozeDuration: TimeInterval {
+        didSet { UserDefaults.standard.set(snoozeDuration, forKey: "snoozeDurationSeconds") }
     }
 
     /// Identifiers of calendars that should NOT trigger alerts. Everything is
@@ -28,6 +34,25 @@ final class CalendarService: ObservableObject {
     private(set) var excludedCalendarIdentifiers: Set<String> {
         didSet {
             UserDefaults.standard.set(Array(excludedCalendarIdentifiers), forKey: "excludedCalendarIdentifiers")
+        }
+    }
+
+    /// Per-calendar lead time, overriding the global `leadTime` for events on that calendar.
+    private(set) var calendarLeadTimeOverrides: [String: TimeInterval] {
+        didSet {
+            UserDefaults.standard.set(calendarLeadTimeOverrides, forKey: "calendarLeadTimeOverrides")
+        }
+    }
+
+    func leadTimeOverride(for calendar: EKCalendar) -> TimeInterval? {
+        calendarLeadTimeOverrides[calendar.calendarIdentifier]
+    }
+
+    func setLeadTimeOverride(_ seconds: TimeInterval?, for calendar: EKCalendar) {
+        if let seconds {
+            calendarLeadTimeOverrides[calendar.calendarIdentifier] = seconds
+        } else {
+            calendarLeadTimeOverrides.removeValue(forKey: calendar.calendarIdentifier)
         }
     }
 
@@ -55,8 +80,12 @@ final class CalendarService: ObservableObject {
     init() {
         let stored = UserDefaults.standard.double(forKey: "alertLeadTimeSeconds")
         self.leadTime = stored > 0 ? stored : 60 // default: 1 minute before
+        let storedSnooze = UserDefaults.standard.double(forKey: "snoozeDurationSeconds")
+        self.snoozeDuration = storedSnooze > 0 ? storedSnooze : 5 * 60 // default: 5 minutes
         let excluded = UserDefaults.standard.stringArray(forKey: "excludedCalendarIdentifiers") ?? []
         self.excludedCalendarIdentifiers = Set(excluded)
+        let overrides = UserDefaults.standard.dictionary(forKey: "calendarLeadTimeOverrides") ?? [:]
+        self.calendarLeadTimeOverrides = overrides.compactMapValues { $0 as? TimeInterval }
     }
 
     func start() {
@@ -94,10 +123,10 @@ final class CalendarService: ObservableObject {
         }
     }
 
-    /// Re-arms a meeting so it fires again after `delay` (snooze).
-    func snooze(_ meeting: UpcomingMeeting, for delay: TimeInterval) {
+    /// Re-arms a meeting so it fires again after `snoozeDuration`.
+    func snooze(_ meeting: UpcomingMeeting) {
         alertedEventKeys.remove(meeting.id)
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + snoozeDuration) { [weak self] in
             guard let self else { return }
             guard Date() < meeting.endDate else { return }
             self.onMeetingDue?(meeting)
@@ -129,7 +158,8 @@ final class CalendarService: ObservableObject {
         for event in events {
             let key = eventKey(event)
             guard !alertedEventKeys.contains(key) else { continue }
-            let triggerAt = event.startDate.addingTimeInterval(-leadTime)
+            let effectiveLeadTime = calendarLeadTimeOverrides[event.calendar.calendarIdentifier] ?? leadTime
+            let triggerAt = event.startDate.addingTimeInterval(-effectiveLeadTime)
             if now >= triggerAt {
                 alertedEventKeys.insert(key)
                 onMeetingDue?(makeMeeting(from: event))

@@ -39,7 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSWorkspace.shared.open(url)
             },
             onSnooze: { [weak self] in
-                self?.calendarService.snooze(meeting, for: 5 * 60)
+                self?.calendarService.snooze(meeting)
             },
             onDismiss: {}
         )
