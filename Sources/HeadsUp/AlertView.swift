@@ -113,7 +113,7 @@ private struct SnoozeSplitButton: View {
             Button(action: onSnooze) {
                 Text("Snooze \(defaultLabel)")
                     .padding(.leading, 26)
-                    .padding(.trailing, 10)
+                    .padding(.trailing, 6)
                     .padding(.vertical, 14)
             }
             .buttonStyle(.plain)
@@ -123,13 +123,13 @@ private struct SnoozeSplitButton: View {
                     Button(option.title) { onSnoozeFor(option.seconds) }
                 }
             } label: {
-                Color.clear
-                    .frame(width: 8, height: 8)
-                    .padding(.leading, 6)
-                    .padding(.trailing, 22)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 11, weight: .bold))
+                    .padding(.trailing, 14)
                     .padding(.vertical, 14)
             }
             .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
             .fixedSize()
         }
         .font(.system(size: 17, weight: .semibold))
