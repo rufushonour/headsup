@@ -1,4 +1,5 @@
 import AppKit
+import EventKit
 import Combine
 
 /// Owns the NSStatusItem: shows the next meeting at a glance and exposes
@@ -8,6 +9,9 @@ final class MenuBarController {
     private let statusItem: NSStatusItem
     private let calendarService: CalendarService
     private var cancellables: Set<AnyCancellable> = []
+
+    /// Fires the full-screen alert with a synthetic meeting, for previewing appearance/behavior.
+    var onTestAlert: (() -> Void)?
 
     private let leadTimeOptions: [(title: String, seconds: TimeInterval)] = [
         ("At start time", 0),
@@ -29,6 +33,14 @@ final class MenuBarController {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] meeting, authorized in
                 self?.updateTitle(meeting: meeting, authorized: authorized)
+            }
+            .store(in: &cancellables)
+
+        calendarService.$availableCalendars
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.statusItem.menu = self.buildMenu()
             }
             .store(in: &cancellables)
 
@@ -63,11 +75,37 @@ final class MenuBarController {
         leadTimeItem.submenu = leadTimeMenu
         menu.addItem(leadTimeItem)
 
+        let calendarsMenu = NSMenu()
+        if calendarService.availableCalendars.isEmpty {
+            let empty = NSMenuItem(title: "No calendars found", action: nil, keyEquivalent: "")
+            empty.isEnabled = false
+            calendarsMenu.addItem(empty)
+        } else {
+            for calendar in calendarService.availableCalendars {
+                let item = NSMenuItem(
+                    title: "\(calendar.title) — \(calendar.source.title)",
+                    action: #selector(toggleCalendar(_:)),
+                    keyEquivalent: ""
+                )
+                item.target = self
+                item.representedObject = calendar.calendarIdentifier
+                item.state = calendarService.isIncluded(calendar) ? .on : .off
+                calendarsMenu.addItem(item)
+            }
+        }
+        let calendarsItem = NSMenuItem(title: "Calendars", action: nil, keyEquivalent: "")
+        calendarsItem.submenu = calendarsMenu
+        menu.addItem(calendarsItem)
+
         menu.addItem(.separator())
 
         let openCalendar = NSMenuItem(title: "Open Calendar", action: #selector(openCalendar), keyEquivalent: "")
         openCalendar.target = self
         menu.addItem(openCalendar)
+
+        let testAlert = NSMenuItem(title: "Send Test Alert", action: #selector(sendTestAlert), keyEquivalent: "")
+        testAlert.target = self
+        menu.addItem(testAlert)
 
         menu.addItem(.separator())
 
@@ -83,9 +121,20 @@ final class MenuBarController {
         statusItem.menu = buildMenu()
     }
 
+    @objc private func toggleCalendar(_ sender: NSMenuItem) {
+        guard let identifier = sender.representedObject as? String,
+              let calendar = calendarService.availableCalendars.first(where: { $0.calendarIdentifier == identifier }) else { return }
+        calendarService.setIncluded(sender.state == .off, for: calendar)
+        statusItem.menu = buildMenu()
+    }
+
     @objc private func openCalendar() {
         if let url = URL(string: "ical://") {
             NSWorkspace.shared.open(url)
         }
+    }
+
+    @objc private func sendTestAlert() {
+        onTestAlert?()
     }
 }

@@ -10,11 +10,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory) // menu bar only, no Dock icon
 
         menuBarController = MenuBarController(calendarService: calendarService)
+        menuBarController?.onTestAlert = { [weak self] in
+            self?.presentTestAlert()
+        }
 
         calendarService.onMeetingDue = { [weak self] meeting in
             self?.presentAlert(for: meeting)
         }
         calendarService.start()
+    }
+
+    private func presentTestAlert() {
+        let now = Date()
+        presentAlert(for: UpcomingMeeting(
+            id: "test-alert-\(now.timeIntervalSince1970)",
+            title: "Test Meeting",
+            startDate: now,
+            endDate: now.addingTimeInterval(15 * 60),
+            joinURL: URL(string: "https://zoom.us")
+        ))
     }
 
     private func presentAlert(for meeting: UpcomingMeeting) {

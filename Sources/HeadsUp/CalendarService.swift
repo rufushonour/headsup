@@ -16,10 +16,32 @@ final class CalendarService: ObservableObject {
 
     @Published private(set) var authorized = false
     @Published private(set) var nextMeeting: UpcomingMeeting?
+    @Published private(set) var availableCalendars: [EKCalendar] = []
 
     /// How long before an event's start time the alert should fire.
     var leadTime: TimeInterval {
         didSet { UserDefaults.standard.set(leadTime, forKey: "alertLeadTimeSeconds") }
+    }
+
+    /// Identifiers of calendars that should NOT trigger alerts. Everything is
+    /// included by default; excluding is opt-out so newly added calendars just work.
+    private(set) var excludedCalendarIdentifiers: Set<String> {
+        didSet {
+            UserDefaults.standard.set(Array(excludedCalendarIdentifiers), forKey: "excludedCalendarIdentifiers")
+        }
+    }
+
+    func isIncluded(_ calendar: EKCalendar) -> Bool {
+        !excludedCalendarIdentifiers.contains(calendar.calendarIdentifier)
+    }
+
+    func setIncluded(_ included: Bool, for calendar: EKCalendar) {
+        if included {
+            excludedCalendarIdentifiers.remove(calendar.calendarIdentifier)
+        } else {
+            excludedCalendarIdentifiers.insert(calendar.calendarIdentifier)
+        }
+        poll()
     }
 
     /// Called once per event when it crosses the lead-time threshold.
@@ -33,6 +55,8 @@ final class CalendarService: ObservableObject {
     init() {
         let stored = UserDefaults.standard.double(forKey: "alertLeadTimeSeconds")
         self.leadTime = stored > 0 ? stored : 60 // default: 1 minute before
+        let excluded = UserDefaults.standard.stringArray(forKey: "excludedCalendarIdentifiers") ?? []
+        self.excludedCalendarIdentifiers = Set(excluded)
     }
 
     func start() {
@@ -40,10 +64,21 @@ final class CalendarService: ObservableObject {
             guard let self else { return }
             self.authorized = granted
             guard granted else { return }
+            self.refreshAvailableCalendars()
             self.poll()
             self.pollTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
+                self?.refreshAvailableCalendars()
                 self?.poll()
             }
+        }
+    }
+
+    private func refreshAvailableCalendars() {
+        let calendars = store.calendars(for: .event).sorted {
+            ($0.source.title, $0.title) < ($1.source.title, $1.title)
+        }
+        if calendars.map(\.calendarIdentifier) != availableCalendars.map(\.calendarIdentifier) {
+            availableCalendars = calendars
         }
     }
 
@@ -73,7 +108,14 @@ final class CalendarService: ObservableObject {
     private func poll() {
         let now = Date()
         let windowEnd = now.addingTimeInterval(lookahead)
-        let predicate = store.predicateForEvents(withStart: now, end: windowEnd, calendars: nil)
+        let includedCalendars = availableCalendars.filter(isIncluded)
+
+        guard !includedCalendars.isEmpty else {
+            nextMeeting = nil
+            return
+        }
+
+        let predicate = store.predicateForEvents(withStart: now, end: windowEnd, calendars: includedCalendars)
         let events = store.events(matching: predicate)
             .filter { !$0.isAllDay }
             .sorted { $0.startDate < $1.startDate }
