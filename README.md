@@ -7,10 +7,9 @@ A macOS menu-bar app that blocks your screen full-screen just before a meeting s
 - Reads events from every calendar connected to macOS Calendar (Google, Outlook, iCloud — anything Calendar.app syncs) via EventKit.
 - Detects a meeting join link on each event, checking the event URL, then location, then notes, preferring known providers (Zoom, Google Meet, Teams, Webex, and others — see `Sources/HeadsUp/MeetingLink.swift`).
 - Shows a full-screen, borderless alert on every display — above other windows and full-screen apps — a configurable amount of time before each meeting (default: 1 minute before).
-- Alert has Join, Snooze (5 min), and Dismiss.
-- Menu bar item shows the next upcoming meeting and lets you change the alert lead time.
-
-Not yet implemented (see the original app's full feature set): Apple Reminders integration, Apple Watch, per-event overrides, custom sounds/themes, iOS/Windows, licensing.
+- Alert has Join, Snooze, and Dismiss; snooze duration is configurable.
+- Menu bar item shows the next upcoming meeting, lets you change the default alert lead time, and lists every calendar so you can include/exclude it or give it its own lead-time override.
+- "Send Test Alert" menu item previews the full-screen alert on demand.
 
 ## Requirements
 
