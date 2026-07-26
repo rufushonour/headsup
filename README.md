@@ -1,4 +1,8 @@
-# Heads Up
+<p align="center">
+  <img src="Resources/icon.png" width="128" height="128" alt="Heads Up icon">
+</p>
+
+<h1 align="center">Heads Up</h1>
 
 A macOS menu-bar app that blocks your screen full-screen just before a meeting starts, so you can't miss it.
 
