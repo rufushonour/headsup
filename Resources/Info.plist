@@ -28,5 +28,9 @@
     <string>Heads Up reads your calendar events so it can alert you full-screen before each meeting starts.</string>
     <key>NSHumanReadableCopyright</key>
     <string>Heads Up</string>
+    <key>SUFeedURL</key>
+    <string>https://raw.githubusercontent.com/rufushonour/headsup/main/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>JtEfaLlUF3hO2bAFhlgathbA4Clt1pfJonbHeEZS+nY=</string>
 </dict>
 </plist>

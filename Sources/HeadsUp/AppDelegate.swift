@@ -1,4 +1,5 @@
 import AppKit
+import Sparkle
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
@@ -9,6 +10,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var welcomeWindowController = WelcomeWindowController(onContinue: { [weak self] in
         self?.completeOnboarding()
     })
+    private lazy var updaterController = SPUStandardUpdaterController(
+        startingUpdater: true,
+        updaterDelegate: nil,
+        userDriverDelegate: nil
+    )
 
     /// Set right before calling NSApp.terminate from the tray's own Quit action.
     /// Any other termination attempt (Dock "Quit", Cmd+Q, etc.) is refused so the
@@ -72,6 +78,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let appMenuItem = NSMenuItem()
         let appMenu = NSMenu()
         appMenu.addItem(NSMenuItem(title: "About Heads Up", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: ""))
+        appMenu.addItem(.separator())
+        let checkForUpdatesItem = NSMenuItem(
+            title: "Check for Updates…",
+            action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)),
+            keyEquivalent: ""
+        )
+        checkForUpdatesItem.target = updaterController
+        appMenu.addItem(checkForUpdatesItem)
         appMenu.addItem(.separator())
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettingsFromMainMenu), keyEquivalent: ",")
         settingsItem.target = self
