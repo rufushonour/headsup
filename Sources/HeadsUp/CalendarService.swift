@@ -8,6 +8,7 @@ struct UpcomingMeeting: Identifiable {
     let startDate: Date
     let endDate: Date
     let joinURL: URL?
+    let location: String?
 }
 
 /// Owns the EKEventStore, requests calendar access, and polls for events that are
@@ -179,7 +180,8 @@ final class CalendarService: ObservableObject {
             title: event.title ?? "Untitled event",
             startDate: event.startDate,
             endDate: event.endDate,
-            joinURL: MeetingLinkExtractor.link(for: event)
+            joinURL: MeetingLinkExtractor.link(for: event),
+            location: event.location
         )
     }
 }

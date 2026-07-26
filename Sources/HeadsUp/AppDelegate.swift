@@ -32,7 +32,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.quitRequestedFromTray = true
             NSApp.terminate(nil)
         }
-
         calendarService.onMeetingDue = { [weak self] meeting in
             self?.presentAlert(for: meeting)
         }
@@ -113,7 +112,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             title: "Test Meeting",
             startDate: now,
             endDate: now.addingTimeInterval(15 * 60),
-            joinURL: URL(string: "https://zoom.us")
+            joinURL: URL(string: "https://zoom.us"),
+            location: nil
         ))
     }
 

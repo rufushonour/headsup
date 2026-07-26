@@ -62,6 +62,7 @@ final class MenuBarController {
 
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
+        menu.autoenablesItems = false
 
         let meetings = calendarService.todaysMeetings
         if meetings.isEmpty {
@@ -77,9 +78,10 @@ final class MenuBarController {
                 )
                 item.target = self
                 item.representedObject = meeting.joinURL
-                item.isEnabled = meeting.joinURL != nil
                 if meeting.joinURL != nil {
                     item.image = NSImage(systemSymbolName: "video.fill", accessibilityDescription: "Join")
+                } else if let location = meeting.location, !location.isEmpty {
+                    item.image = NSImage(systemSymbolName: "mappin.and.ellipse", accessibilityDescription: "Location")
                 }
                 menu.addItem(item)
             }
@@ -113,7 +115,11 @@ final class MenuBarController {
     private func meetingTitle(for meeting: UpcomingMeeting) -> String {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
-        return "\(formatter.string(from: meeting.startDate))  \(meeting.title)"
+        var title = "\(formatter.string(from: meeting.startDate))  \(meeting.title)"
+        if meeting.joinURL == nil, let location = meeting.location, !location.isEmpty {
+            title += "  —  \(location)"
+        }
+        return title
     }
 
     @objc private func joinMeeting(_ sender: NSMenuItem) {
