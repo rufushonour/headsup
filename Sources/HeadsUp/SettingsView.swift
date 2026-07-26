@@ -19,33 +19,59 @@ struct SettingsView: View {
     @ObservedObject var calendarService: CalendarService
 
     var body: some View {
-        Form {
-            Section("Alerts") {
-                Picker("Alert me", selection: $calendarService.leadTime) {
-                    ForEach(leadTimeOptions, id: \.seconds) { option in
-                        Text(option.title).tag(option.seconds)
-                    }
-                }
-                Picker("Snooze duration", selection: $calendarService.snoozeDuration) {
-                    ForEach(snoozeDurationOptions, id: \.seconds) { option in
-                        Text(option.title).tag(option.seconds)
-                    }
-                }
-            }
+        VStack(spacing: 0) {
+            header
 
-            Section("Calendars") {
-                if calendarService.availableCalendars.isEmpty {
-                    Text("No calendars found")
-                        .foregroundColor(.secondary)
-                } else {
-                    ForEach(calendarService.availableCalendars, id: \.calendarIdentifier) { calendar in
-                        CalendarRow(calendar: calendar, calendarService: calendarService)
+            Divider()
+
+            Form {
+                Section("Alerts") {
+                    Picker(selection: $calendarService.leadTime) {
+                        ForEach(leadTimeOptions, id: \.seconds) { option in
+                            Text(option.title).tag(option.seconds)
+                        }
+                    } label: {
+                        Label("Alert me", systemImage: "bell.fill")
+                    }
+                    Picker(selection: $calendarService.snoozeDuration) {
+                        ForEach(snoozeDurationOptions, id: \.seconds) { option in
+                            Text(option.title).tag(option.seconds)
+                        }
+                    } label: {
+                        Label("Snooze duration", systemImage: "moon.zzz.fill")
+                    }
+                }
+
+                Section("Calendars") {
+                    if calendarService.availableCalendars.isEmpty {
+                        Text("No calendars found")
+                            .foregroundColor(.secondary)
+                    } else {
+                        ForEach(calendarService.availableCalendars, id: \.calendarIdentifier) { calendar in
+                            CalendarRow(calendar: calendar, calendarService: calendarService)
+                        }
                     }
                 }
             }
+            .formStyle(.grouped)
         }
-        .formStyle(.grouped)
-        .frame(width: 480, height: 420)
+        .frame(width: 500, height: 520)
+    }
+
+    private var header: some View {
+        HStack(spacing: 14) {
+            AppIconBadge(size: 44)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Heads Up")
+                    .font(.system(size: 17, weight: .semibold))
+                Text("Full-screen meeting alerts")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
     }
 }
 
@@ -67,14 +93,23 @@ private struct CalendarRow: View {
         )
     }
 
+    private var calendarColor: Color {
+        Color(nsColor: calendar.color)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Toggle(isOn: includedBinding) {
-                VStack(alignment: .leading) {
-                    Text(calendar.title)
-                    Text(calendar.source.title)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(calendarColor)
+                        .frame(width: 9, height: 9)
+                    VStack(alignment: .leading) {
+                        Text(calendar.title)
+                        Text(calendar.source.title)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
 
@@ -86,7 +121,7 @@ private struct CalendarRow: View {
                     }
                 }
                 .labelsHidden()
-                .padding(.leading, 24)
+                .padding(.leading, 26)
             }
         }
         .padding(.vertical, 2)

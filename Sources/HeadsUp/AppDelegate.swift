@@ -6,11 +6,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let alertPresenter = AlertPresenter()
     private var menuBarController: MenuBarController?
     private lazy var settingsWindowController = SettingsWindowController(calendarService: calendarService)
+    private lazy var welcomeWindowController = WelcomeWindowController(onContinue: { [weak self] in
+        self?.completeOnboarding()
+    })
 
     /// Set right before calling NSApp.terminate from the tray's own Quit action.
     /// Any other termination attempt (Dock "Quit", Cmd+Q, etc.) is refused so the
     /// background calendar polling and tray icon survive closing/quitting windows.
     private var quitRequestedFromTray = false
+
+    private static let hasCompletedOnboardingKey = "hasCompletedOnboarding"
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
@@ -31,8 +36,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         calendarService.onMeetingDue = { [weak self] meeting in
             self?.presentAlert(for: meeting)
         }
-        calendarService.start()
 
+        if UserDefaults.standard.bool(forKey: Self.hasCompletedOnboardingKey) {
+            calendarService.start()
+        } else {
+            welcomeWindowController.show()
+        }
+    }
+
+    private func completeOnboarding() {
+        UserDefaults.standard.set(true, forKey: Self.hasCompletedOnboardingKey)
+        calendarService.start()
+        welcomeWindowController.window?.close()
         settingsWindowController.show()
     }
 
@@ -41,6 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return .terminateNow
         }
         settingsWindowController.window?.close()
+        welcomeWindowController.window?.close()
         return .terminateCancel
     }
 
@@ -102,8 +118,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func presentAlert(for meeting: UpcomingMeeting) {
+        let minutes = Int(calendarService.snoozeDuration / 60)
+        let snoozeLabel = minutes == 1 ? "1 min" : "\(minutes) min"
         alertPresenter.present(
             meeting,
+            snoozeLabel: snoozeLabel,
             onJoin: {
                 guard let url = meeting.joinURL else { return }
                 NSWorkspace.shared.open(url)
