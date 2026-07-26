@@ -16,6 +16,7 @@ final class CalendarService: ObservableObject {
 
     @Published private(set) var authorized = false
     @Published private(set) var nextMeeting: UpcomingMeeting?
+    @Published private(set) var todaysMeetings: [UpcomingMeeting] = []
     @Published private(set) var availableCalendars: [EKCalendar] = []
 
     /// How long before an event's start time the alert should fire, unless a
@@ -138,25 +139,25 @@ final class CalendarService: ObservableObject {
     private func poll() {
         let now = Date()
         let windowEnd = now.addingTimeInterval(lookahead)
+        let endOfDay = Foundation.Calendar.current.dateInterval(of: .day, for: now)?.end ?? windowEnd
+        let queryEnd = max(windowEnd, endOfDay)
         let includedCalendars = availableCalendars.filter(isIncluded)
 
         guard !includedCalendars.isEmpty else {
             nextMeeting = nil
+            todaysMeetings = []
             return
         }
 
-        let predicate = store.predicateForEvents(withStart: now, end: windowEnd, calendars: includedCalendars)
+        let predicate = store.predicateForEvents(withStart: now, end: queryEnd, calendars: includedCalendars)
         let events = store.events(matching: predicate)
             .filter { !$0.isAllDay }
             .sorted { $0.startDate < $1.startDate }
 
-        if let soonest = events.first {
-            nextMeeting = makeMeeting(from: soonest)
-        } else {
-            nextMeeting = nil
-        }
+        nextMeeting = events.first.map(makeMeeting)
+        todaysMeetings = events.map(makeMeeting)
 
-        for event in events {
+        for event in events where event.startDate <= windowEnd {
             let key = eventKey(event)
             guard !alertedEventKeys.contains(key) else { continue }
             let effectiveLeadTime = calendarLeadTimeOverrides[event.calendar.calendarIdentifier] ?? leadTime

@@ -36,6 +36,14 @@ final class MenuBarController {
             }
             .store(in: &cancellables)
 
+        calendarService.$todaysMeetings
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.statusItem.menu = self.buildMenu()
+            }
+            .store(in: &cancellables)
+
         statusItem.menu = buildMenu()
     }
 
@@ -54,6 +62,30 @@ final class MenuBarController {
 
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
+
+        let meetings = calendarService.todaysMeetings
+        if meetings.isEmpty {
+            let empty = NSMenuItem(title: "No more meetings today", action: nil, keyEquivalent: "")
+            empty.isEnabled = false
+            menu.addItem(empty)
+        } else {
+            for meeting in meetings {
+                let item = NSMenuItem(
+                    title: meetingTitle(for: meeting),
+                    action: meeting.joinURL != nil ? #selector(joinMeeting(_:)) : nil,
+                    keyEquivalent: ""
+                )
+                item.target = self
+                item.representedObject = meeting.joinURL
+                item.isEnabled = meeting.joinURL != nil
+                if meeting.joinURL != nil {
+                    item.image = NSImage(systemSymbolName: "video.fill", accessibilityDescription: "Join")
+                }
+                menu.addItem(item)
+            }
+        }
+
+        menu.addItem(.separator())
 
         let openCalendar = NSMenuItem(title: "Open Calendar", action: #selector(openCalendar), keyEquivalent: "")
         openCalendar.target = self
@@ -76,6 +108,17 @@ final class MenuBarController {
         menu.addItem(quit)
 
         return menu
+    }
+
+    private func meetingTitle(for meeting: UpcomingMeeting) -> String {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return "\(formatter.string(from: meeting.startDate))  \(meeting.title)"
+    }
+
+    @objc private func joinMeeting(_ sender: NSMenuItem) {
+        guard let url = sender.representedObject as? URL else { return }
+        NSWorkspace.shared.open(url)
     }
 
     @objc private func openCalendar() {
