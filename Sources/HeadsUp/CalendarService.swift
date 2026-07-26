@@ -123,10 +123,11 @@ final class CalendarService: ObservableObject {
         }
     }
 
-    /// Re-arms a meeting so it fires again after `snoozeDuration`.
-    func snooze(_ meeting: UpcomingMeeting) {
+    /// Re-arms a meeting so it fires again after `delay` (chosen on the alert itself,
+    /// defaulting to `snoozeDuration` but overridable per-snooze).
+    func snooze(_ meeting: UpcomingMeeting, for delay: TimeInterval) {
         alertedEventKeys.remove(meeting.id)
-        DispatchQueue.main.asyncAfter(deadline: .now() + snoozeDuration) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             guard let self else { return }
             guard Date() < meeting.endDate else { return }
             self.onMeetingDue?(meeting)

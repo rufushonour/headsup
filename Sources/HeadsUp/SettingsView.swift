@@ -25,7 +25,7 @@ struct SettingsView: View {
             Divider()
 
             Form {
-                Section("Alerts") {
+                Section {
                     Picker(selection: $calendarService.leadTime) {
                         ForEach(leadTimeOptions, id: \.seconds) { option in
                             Text(option.title).tag(option.seconds)
@@ -40,6 +40,10 @@ struct SettingsView: View {
                     } label: {
                         Label("Snooze duration", systemImage: "moon.zzz.fill")
                     }
+                } header: {
+                    Text("Defaults")
+                } footer: {
+                    Text("Applies to every calendar unless overridden below. You can also pick a different snooze length right on the alert itself.")
                 }
 
                 Section("Calendars") {

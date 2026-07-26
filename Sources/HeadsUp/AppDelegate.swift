@@ -118,17 +118,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func presentAlert(for meeting: UpcomingMeeting) {
-        let minutes = Int(calendarService.snoozeDuration / 60)
-        let snoozeLabel = minutes == 1 ? "1 min" : "\(minutes) min"
         alertPresenter.present(
             meeting,
-            snoozeLabel: snoozeLabel,
+            defaultSnoozeSeconds: calendarService.snoozeDuration,
             onJoin: {
                 guard let url = meeting.joinURL else { return }
                 NSWorkspace.shared.open(url)
             },
-            onSnooze: { [weak self] in
-                self?.calendarService.snooze(meeting)
+            onSnooze: { [weak self] seconds in
+                self?.calendarService.snooze(meeting, for: seconds)
             },
             onDismiss: {}
         )

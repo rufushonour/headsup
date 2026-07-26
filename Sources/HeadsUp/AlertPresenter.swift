@@ -8,20 +8,20 @@ final class AlertPresenter {
     private var windows: [NSWindow] = []
     private var onDismiss: (() -> Void)?
 
-    func present(_ meeting: UpcomingMeeting, snoozeLabel: String, onJoin: @escaping () -> Void, onSnooze: @escaping () -> Void, onDismiss: @escaping () -> Void) {
+    func present(_ meeting: UpcomingMeeting, defaultSnoozeSeconds: TimeInterval, onJoin: @escaping () -> Void, onSnooze: @escaping (TimeInterval) -> Void, onDismiss: @escaping () -> Void) {
         dismiss() // guard against overlapping presentations
 
         self.onDismiss = onDismiss
 
         let view = AlertView(
             meeting: meeting,
-            snoozeLabel: snoozeLabel,
+            defaultSnoozeSeconds: defaultSnoozeSeconds,
             onJoin: { [weak self] in
                 onJoin()
                 self?.dismiss()
             },
-            onSnooze: { [weak self] in
-                onSnooze()
+            onSnooze: { [weak self] seconds in
+                onSnooze(seconds)
                 self?.dismiss()
             },
             onDismiss: { [weak self] in

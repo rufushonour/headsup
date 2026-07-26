@@ -1,15 +1,26 @@
 import SwiftUI
 
+private let snoozeOptions: [(title: String, seconds: TimeInterval)] = [
+    ("1 min", 60),
+    ("5 min", 300),
+    ("10 min", 600),
+    ("15 min", 900)
+]
+
 struct AlertView: View {
     let meeting: UpcomingMeeting
-    let snoozeLabel: String
+    let defaultSnoozeSeconds: TimeInterval
     let onJoin: () -> Void
-    let onSnooze: () -> Void
+    let onSnooze: (TimeInterval) -> Void
     let onDismiss: () -> Void
 
     @State private var now = Date()
     @State private var appeared = false
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    private var defaultSnoozeLabel: String {
+        snoozeOptions.first(where: { $0.seconds == defaultSnoozeSeconds })?.title ?? "\(Int(defaultSnoozeSeconds / 60)) min"
+    }
 
     private var statusText: String {
         let secondsUntil = meeting.startDate.timeIntervalSince(now)
@@ -64,10 +75,11 @@ struct AlertView: View {
                         .buttonStyle(AlertButtonStyle(background: Color(red: 0.20, green: 0.72, blue: 0.36), foreground: .white))
                     }
 
-                    Button(action: onSnooze) {
-                        Text("Snooze \(snoozeLabel)")
-                    }
-                    .buttonStyle(AlertButtonStyle(background: Color.white.opacity(0.14), foreground: .white))
+                    SnoozeSplitButton(
+                        defaultLabel: defaultSnoozeLabel,
+                        onSnooze: { onSnooze(defaultSnoozeSeconds) },
+                        onSnoozeFor: onSnooze
+                    )
 
                     Button(action: onDismiss) {
                         Text("Dismiss")
@@ -86,6 +98,43 @@ struct AlertView: View {
                 appeared = true
             }
         }
+    }
+}
+
+/// A "Snooze 5 min" capsule that snoozes at the configured default on a plain click,
+/// with a small chevron opening a menu to pick a different duration for this alert only.
+private struct SnoozeSplitButton: View {
+    let defaultLabel: String
+    let onSnooze: () -> Void
+    let onSnoozeFor: (TimeInterval) -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Button(action: onSnooze) {
+                Text("Snooze \(defaultLabel)")
+                    .padding(.leading, 26)
+                    .padding(.trailing, 10)
+                    .padding(.vertical, 14)
+            }
+            .buttonStyle(.plain)
+
+            Menu {
+                ForEach(snoozeOptions, id: \.seconds) { option in
+                    Button(option.title) { onSnoozeFor(option.seconds) }
+                }
+            } label: {
+                Color.clear
+                    .frame(width: 8, height: 8)
+                    .padding(.leading, 6)
+                    .padding(.trailing, 22)
+                    .padding(.vertical, 14)
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+        }
+        .font(.system(size: 17, weight: .semibold))
+        .foregroundColor(.white)
+        .background(Capsule().fill(Color.white.opacity(0.14)))
     }
 }
 
