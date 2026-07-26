@@ -11,13 +11,15 @@ A macOS menu-bar app that blocks your screen full-screen just before a meeting s
 - Reads events from every calendar connected to macOS Calendar (Google, Outlook, iCloud — anything Calendar.app syncs) via EventKit.
 - Detects a meeting join link on each event, checking the event URL, then location, then notes, preferring known providers (Zoom, Google Meet, Teams, Webex, and others — see `Sources/HeadsUp/MeetingLink.swift`).
 - Shows a full-screen, borderless alert on every display — above other windows and full-screen apps — a configurable amount of time before each meeting (default: 1 minute before).
-- Alert has Join, Snooze, and Dismiss; snooze duration is configurable.
-- Menu bar item shows the next upcoming meeting, lets you change the default alert lead time, and lists every calendar so you can include/exclude it or give it its own lead-time override.
+- Alert has Join, Snooze, and Dismiss; snooze duration is configurable per-alert (a quick default, or a menu of other lengths) as well as in Settings.
+- Menu bar dropdown lists the rest of today's meetings, each with a Join icon if a link was detected, or its location (e.g. a room name) if not.
+- A proper Settings window (Cmd+, or the tray menu) for the default alert lead time, snooze duration, and per-calendar include/exclude + lead-time override.
+- A first-launch Welcome screen explaining what the app does before asking for Calendar access.
 - "Send Test Alert" menu item previews the full-screen alert on demand.
 
 ## Install
 
-1. Download the latest `HeadsUp.app.zip` from [Releases](https://github.com/rufushonour/headsup/releases) (no releases published yet — coming soon), then unzip it.
+1. Download the latest `HeadsUp-<version>.dmg` from [Releases](https://github.com/rufushonour/headsup/releases) (no releases published yet — coming soon), open it, and drag Heads Up into Applications.
 2. Open `HeadsUp.app`. macOS will block it with **"HeadsUp.app" Not Opened** — click **Done**.
 3. Go to **System Settings → Privacy & Security**, scroll to the Security section, and click **Open Anyway** next to the line about HeadsUp being blocked. Confirm when prompted.
 4. Approve the Calendar access prompt when it appears.
@@ -39,6 +41,14 @@ open build/HeadsUp.app
 
 The script compiles via Swift Package Manager, packages the binary into a proper `.app` bundle with `Info.plist` (needed for the Calendar permission prompt to attach to the app rather than to Terminal), and ad-hoc code-signs it.
 
+To build the `.dmg` used for GitHub Releases:
+
+```
+./Scripts/build_dmg.sh          # release build -> build/HeadsUp-<version>.dmg
+```
+
+This runs `build_app.sh release` first, then stages the `.app` alongside an `Applications` symlink and packs it with `hdiutil` — the standard drag-to-Applications layout.
+
 For iterating on Swift code directly:
 
 ```
@@ -49,10 +59,14 @@ swift run   # note: permission prompts attach to whatever process invokes EventK
 
 ## Project layout
 
-- `Sources/HeadsUp/CalendarService.swift` — EventKit access, polling, alert scheduling/snooze.
+- `Sources/HeadsUp/CalendarService.swift` — EventKit access, polling, alert scheduling/snooze, today's meetings list.
 - `Sources/HeadsUp/MeetingLink.swift` — join-link detection.
 - `Sources/HeadsUp/AlertPresenter.swift`, `AlertView.swift` — the full-screen alert (one borderless window per screen).
-- `Sources/HeadsUp/MenuBarController.swift` — status bar item and preferences menu.
+- `Sources/HeadsUp/MenuBarController.swift` — status bar item, today's meetings, quick actions.
+- `Sources/HeadsUp/SettingsView.swift`, `SettingsWindowController.swift` — the Settings window.
+- `Sources/HeadsUp/WelcomeView.swift`, `WelcomeWindowController.swift` — first-launch onboarding.
+- `Sources/HeadsUp/AppIconBadge.swift` — SwiftUI rendition of the app icon, reused across screens.
 - `Sources/HeadsUp/AppDelegate.swift`, `main.swift` — wiring and entry point.
 - `Resources/Info.plist` — bundle metadata and calendar usage descriptions.
 - `Scripts/build_app.sh` — SPM build → `.app` packaging → ad-hoc codesign.
+- `Scripts/build_dmg.sh` — `build_app.sh release` → `.dmg` packaging for GitHub Releases.
