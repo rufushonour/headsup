@@ -27,15 +27,27 @@ cp "$ROOT_DIR/appcast.xml" "$STAGING_DIR/appcast.xml"
 DOWNLOAD_PREFIX="https://github.com/$REPO/releases/download/v${VERSION}/"
 
 echo "Generating signed appcast entry..."
-"$GENERATE_APPCAST" --download-url-prefix "$DOWNLOAD_PREFIX" "$STAGING_DIR"
+if [ -n "${SPARKLE_PRIVATE_KEY:-}" ]; then
+    # CI path: key is supplied via a secret env var, piped straight in, never written to disk.
+    echo "$SPARKLE_PRIVATE_KEY" | "$GENERATE_APPCAST" --ed-key-file - --download-url-prefix "$DOWNLOAD_PREFIX" "$STAGING_DIR"
+else
+    # Local path: key lives in this Mac's Keychain.
+    "$GENERATE_APPCAST" --download-url-prefix "$DOWNLOAD_PREFIX" "$STAGING_DIR"
+fi
 
 cp "$STAGING_DIR/appcast.xml" "$ROOT_DIR/appcast.xml"
 rm -rf "$STAGING_DIR"
 
 echo ""
 echo "Done. appcast.xml updated for version $VERSION."
-echo ""
-echo "Next steps to publish (not run automatically):"
-echo "  1. git add appcast.xml && git commit -m \"Release v$VERSION\" && git push"
-echo "  2. gh release create v$VERSION build/$DMG_NAME --title \"v$VERSION\" --notes \"...\""
-echo "     (the tag and asset filename must exactly match what's now in appcast.xml)"
+
+if [ -z "${CI:-}" ]; then
+    echo ""
+    echo "Next steps to publish (not run automatically):"
+    echo "  1. git add appcast.xml && git commit -m \"Release v$VERSION\" && git push"
+    echo "  2. gh release create v$VERSION build/$DMG_NAME --title \"v$VERSION\" --notes \"...\""
+    echo "     (the tag and asset filename must exactly match what's now in appcast.xml)"
+    echo ""
+    echo "Or just push a tag matching Info.plist's version (e.g. git tag v$VERSION && git push origin v$VERSION)"
+    echo "and .github/workflows/release.yml will do all of the above for you."
+fi

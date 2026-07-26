@@ -19,7 +19,7 @@ A macOS menu-bar app that blocks your screen full-screen just before a meeting s
 
 ## Install
 
-1. Download the latest `HeadsUp-<version>.dmg` from [Releases](https://github.com/rufushonour/headsup/releases) (no releases published yet — coming soon), open it, and drag Heads Up into Applications.
+1. Download the latest `HeadsUp-<version>.dmg` from [Releases](https://github.com/rufushonour/headsup/releases), open it, and drag Heads Up into Applications.
 2. Open `HeadsUp.app`. macOS will block it with **"HeadsUp.app" Not Opened** — click **Done**.
 3. Go to **System Settings → Privacy & Security**, scroll to the Security section, and click **Open Anyway** next to the line about HeadsUp being blocked. Confirm when prompted.
 4. Approve the Calendar access prompt when it appears.
@@ -49,6 +49,16 @@ To build the `.dmg` used for GitHub Releases:
 
 This runs `build_app.sh release` first, then stages the `.app` alongside an `Applications` symlink and packs it with `hdiutil` — the standard drag-to-Applications layout.
 
+## Cutting a release
+
+```
+./Scripts/cut_release.sh 0.1.1
+```
+
+This bumps the version in `Resources/Info.plist`, commits and pushes it to `main`, then creates and pushes the matching `vX.Y.Z` tag. Pushing that tag triggers `.github/workflows/release.yml` on GitHub Actions, which builds the `.dmg`, signs a new `appcast.xml` entry (Sparkle/EdDSA), commits the updated appcast back to `main`, and publishes the GitHub Release with the `.dmg` attached. Watch it with `gh run watch` or on the [Actions tab](https://github.com/rufushonour/headsup/actions).
+
+The signing key lives in the `SPARKLE_PRIVATE_KEY` GitHub Actions secret (and is backed up in 1Password) — it's never committed to the repo. `Scripts/release.sh` is what the workflow runs under the hood; it also works locally (reading the key from this Mac's Keychain instead) if you want to build and inspect a release without publishing it.
+
 For iterating on Swift code directly:
 
 ```
@@ -70,3 +80,6 @@ swift run   # note: permission prompts attach to whatever process invokes EventK
 - `Resources/Info.plist` — bundle metadata and calendar usage descriptions.
 - `Scripts/build_app.sh` — SPM build → `.app` packaging → ad-hoc codesign.
 - `Scripts/build_dmg.sh` — `build_app.sh release` → `.dmg` packaging for GitHub Releases.
+- `Scripts/release.sh` — builds the `.dmg` and generates a signed `appcast.xml` entry; used locally and by CI.
+- `Scripts/cut_release.sh` — bumps `Info.plist`'s version and pushes the matching tag to trigger a release.
+- `.github/workflows/release.yml` — on tag push, runs `release.sh`, commits `appcast.xml`, and publishes the GitHub Release.
