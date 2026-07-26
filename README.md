@@ -15,6 +15,15 @@ A macOS menu-bar app that blocks your screen full-screen just before a meeting s
 - Menu bar item shows the next upcoming meeting, lets you change the default alert lead time, and lists every calendar so you can include/exclude it or give it its own lead-time override.
 - "Send Test Alert" menu item previews the full-screen alert on demand.
 
+## Install
+
+1. Download the latest `HeadsUp.app.zip` from [Releases](https://github.com/rufushonour/headsup/releases) (no releases published yet — coming soon), then unzip it.
+2. Open `HeadsUp.app`. macOS will block it with **"HeadsUp.app" Not Opened** — click **Done**.
+3. Go to **System Settings → Privacy & Security**, scroll to the Security section, and click **Open Anyway** next to the line about HeadsUp being blocked. Confirm when prompted.
+4. Approve the Calendar access prompt when it appears.
+
+This extra step is because the app isn't signed with an Apple Developer ID (that's a £100/year program) or notarized by Apple, so Gatekeeper doesn't recognize it as coming from a known developer. It's a one-time thing per download — after you click Open Anyway once, it launches normally from then on.
+
 ## Requirements
 
 - macOS 13+ to run. Built here with Xcode 14.1 / Swift 5.7 (that toolchain's SDK caps at macOS 13, so the granular macOS 14 EventKit permission API isn't used — the legacy `requestAccess(to:)` API is used instead and works fine on newer macOS too).
