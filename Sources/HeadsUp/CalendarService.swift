@@ -20,25 +20,25 @@ final class CalendarService: ObservableObject {
 
     /// How long before an event's start time the alert should fire, unless a
     /// calendar-specific override applies (see `calendarLeadTimeOverrides`).
-    var leadTime: TimeInterval {
+    @Published var leadTime: TimeInterval {
         didSet { UserDefaults.standard.set(leadTime, forKey: "alertLeadTimeSeconds") }
     }
 
     /// How long a snoozed alert waits before re-firing.
-    var snoozeDuration: TimeInterval {
+    @Published var snoozeDuration: TimeInterval {
         didSet { UserDefaults.standard.set(snoozeDuration, forKey: "snoozeDurationSeconds") }
     }
 
     /// Identifiers of calendars that should NOT trigger alerts. Everything is
     /// included by default; excluding is opt-out so newly added calendars just work.
-    private(set) var excludedCalendarIdentifiers: Set<String> {
+    @Published private(set) var excludedCalendarIdentifiers: Set<String> {
         didSet {
             UserDefaults.standard.set(Array(excludedCalendarIdentifiers), forKey: "excludedCalendarIdentifiers")
         }
     }
 
     /// Per-calendar lead time, overriding the global `leadTime` for events on that calendar.
-    private(set) var calendarLeadTimeOverrides: [String: TimeInterval] {
+    @Published private(set) var calendarLeadTimeOverrides: [String: TimeInterval] {
         didSet {
             UserDefaults.standard.set(calendarLeadTimeOverrides, forKey: "calendarLeadTimeOverrides")
         }

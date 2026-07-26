@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let calendarService = CalendarService()
     private let alertPresenter = AlertPresenter()
     private var menuBarController: MenuBarController?
+    private lazy var settingsWindowController = SettingsWindowController(calendarService: calendarService)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory) // menu bar only, no Dock icon
@@ -12,6 +13,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuBarController = MenuBarController(calendarService: calendarService)
         menuBarController?.onTestAlert = { [weak self] in
             self?.presentTestAlert()
+        }
+        menuBarController?.onOpenSettings = { [weak self] in
+            self?.settingsWindowController.show()
         }
 
         calendarService.onMeetingDue = { [weak self] meeting in
