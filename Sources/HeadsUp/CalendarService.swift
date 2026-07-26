@@ -48,8 +48,14 @@ final class CalendarService: ObservableObject {
     }
 
     func requestAccess(completion: @escaping (Bool) -> Void) {
-        store.requestAccess(to: .event) { granted, _ in
-            DispatchQueue.main.async { completion(granted) }
+        if #available(macOS 14.0, *) {
+            store.requestFullAccessToEvents { granted, _ in
+                DispatchQueue.main.async { completion(granted) }
+            }
+        } else {
+            store.requestAccess(to: .event) { granted, _ in
+                DispatchQueue.main.async { completion(granted) }
+            }
         }
     }
 
