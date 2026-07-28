@@ -16,15 +16,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         userDriverDelegate: nil
     )
 
-    /// Set right before calling NSApp.terminate from the tray's own Quit action.
-    /// Any other termination attempt (Dock "Quit", Cmd+Q, etc.) is refused so the
-    /// background calendar polling and tray icon survive closing/quitting windows.
-    private var quitRequestedFromTray = false
-
     private static let hasCompletedOnboardingKey = "hasCompletedOnboarding"
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.regular)
+        NSApp.setActivationPolicy(.accessory)
         NSApp.mainMenu = buildMainMenu()
 
         menuBarController = MenuBarController(calendarService: calendarService)
@@ -34,8 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuBarController?.onOpenSettings = { [weak self] in
             self?.settingsWindowController.show()
         }
-        menuBarController?.onQuit = { [weak self] in
-            self?.quitRequestedFromTray = true
+        menuBarController?.onQuit = {
             NSApp.terminate(nil)
         }
         calendarService.onMeetingDue = { [weak self] meeting in
@@ -57,12 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        if quitRequestedFromTray {
-            return .terminateNow
-        }
-        settingsWindowController.window?.close()
-        welcomeWindowController.window?.close()
-        return .terminateCancel
+        .terminateNow
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {

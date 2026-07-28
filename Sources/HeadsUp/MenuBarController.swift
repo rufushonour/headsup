@@ -16,8 +16,7 @@ final class MenuBarController {
     /// Opens the Settings window.
     var onOpenSettings: (() -> Void)?
 
-    /// The one real "fully quit" action, distinct from window closes/Dock Quit which should
-    /// leave the background tray running (see AppDelegate.applicationShouldTerminate).
+    /// Quits the app (equivalent to Cmd+Q / Dock Quit).
     var onQuit: (() -> Void)?
 
     init(calendarService: CalendarService) {
@@ -29,10 +28,10 @@ final class MenuBarController {
         }
 
         calendarService.$nextMeeting
-            .combineLatest(calendarService.$authorized)
+            .combineLatest(calendarService.$authorized, calendarService.$menuBarTitleMaxLength, calendarService.$showNoMeetingsText)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] meeting, authorized in
-                self?.updateTitle(meeting: meeting, authorized: authorized)
+            .sink { [weak self] meeting, authorized, maxLength, showNoMeetingsText in
+                self?.updateTitle(meeting: meeting, authorized: authorized, maxLength: maxLength, showNoMeetingsText: showNoMeetingsText)
             }
             .store(in: &cancellables)
 
@@ -47,17 +46,25 @@ final class MenuBarController {
         statusItem.menu = buildMenu()
     }
 
-    private func updateTitle(meeting: UpcomingMeeting?, authorized: Bool) {
+    private func updateTitle(meeting: UpcomingMeeting?, authorized: Bool, maxLength: Int, showNoMeetingsText: Bool) {
         guard let button = statusItem.button else { return }
         if !authorized {
             button.title = " Calendar access needed"
         } else if let meeting {
             let formatter = DateFormatter()
             formatter.timeStyle = .short
-            button.title = " \(meeting.title) at \(formatter.string(from: meeting.startDate))"
-        } else {
+            let title = truncated(meeting.title, maxLength: maxLength)
+            button.title = " \(title) at \(formatter.string(from: meeting.startDate))"
+        } else if showNoMeetingsText {
             button.title = " No upcoming meetings"
+        } else {
+            button.title = ""
         }
+    }
+
+    private func truncated(_ title: String, maxLength: Int) -> String {
+        guard maxLength > 0, title.count > maxLength else { return title }
+        return String(title.prefix(maxLength)) + "…"
     }
 
     private func buildMenu() -> NSMenu {

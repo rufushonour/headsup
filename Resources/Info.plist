@@ -20,6 +20,8 @@
 	<string>0.2.0</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
+	<key>LSUIElement</key>
+	<true/>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Heads Up reads your calendar events so it can alert you full-screen before each meeting starts.</string>
 	<key>NSCalendarsUsageDescription</key>

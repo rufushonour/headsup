@@ -15,6 +15,13 @@ private let snoozeDurationOptions: [(title: String, seconds: TimeInterval)] = [
     ("15 minutes", 900)
 ]
 
+private let menuBarTitleLengthOptions: [(title: String, characters: Int)] = [
+    ("Short", 20),
+    ("Medium", 40),
+    ("Long", 60),
+    ("No limit", 0)
+]
+
 struct SettingsView: View {
     @ObservedObject var calendarService: CalendarService
 
@@ -44,6 +51,23 @@ struct SettingsView: View {
                     Text("Defaults")
                 } footer: {
                     Text("Applies to every calendar unless overridden below. You can also pick a different snooze length right on the alert itself.")
+                }
+
+                Section {
+                    Picker(selection: $calendarService.menuBarTitleMaxLength) {
+                        ForEach(menuBarTitleLengthOptions, id: \.characters) { option in
+                            Text(option.title).tag(option.characters)
+                        }
+                    } label: {
+                        Label("Meeting title length", systemImage: "textformat.size")
+                    }
+                    Toggle(isOn: $calendarService.showNoMeetingsText) {
+                        Label("Show \"No upcoming meetings\" text", systemImage: "text.bubble")
+                    }
+                } header: {
+                    Text("Menu Bar")
+                } footer: {
+                    Text("When off, the menu bar shows just the icon if there's nothing coming up.")
                 }
 
                 Section("Calendars") {

@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-final class WelcomeWindowController: NSWindowController {
+final class WelcomeWindowController: NSWindowController, NSWindowDelegate {
 
     convenience init(onContinue: @escaping () -> Void) {
         let view = WelcomeView(onContinue: onContinue)
@@ -12,10 +12,16 @@ final class WelcomeWindowController: NSWindowController {
         window.isReleasedWhenClosed = false
         window.center()
         self.init(window: window)
+        window.delegate = self
     }
 
     func show() {
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        NSApp.setActivationPolicy(.accessory)
     }
 }

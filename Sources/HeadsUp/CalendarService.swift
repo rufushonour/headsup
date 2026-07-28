@@ -46,6 +46,18 @@ final class CalendarService: ObservableObject {
         }
     }
 
+    /// Max characters of a meeting's title shown in the menu bar before it's truncated
+    /// with an ellipsis. 0 means no limit (show the full title).
+    @Published var menuBarTitleMaxLength: Int {
+        didSet { UserDefaults.standard.set(menuBarTitleMaxLength, forKey: "menuBarTitleMaxLength") }
+    }
+
+    /// Whether the menu bar shows "No upcoming meetings" text when there's nothing
+    /// coming up, or just the icon.
+    @Published var showNoMeetingsText: Bool {
+        didSet { UserDefaults.standard.set(showNoMeetingsText, forKey: "showNoMeetingsText") }
+    }
+
     func leadTimeOverride(for calendar: EKCalendar) -> TimeInterval? {
         calendarLeadTimeOverrides[calendar.calendarIdentifier]
     }
@@ -88,6 +100,10 @@ final class CalendarService: ObservableObject {
         self.excludedCalendarIdentifiers = Set(excluded)
         let overrides = UserDefaults.standard.dictionary(forKey: "calendarLeadTimeOverrides") ?? [:]
         self.calendarLeadTimeOverrides = overrides.compactMapValues { $0 as? TimeInterval }
+        let storedMaxLength = UserDefaults.standard.object(forKey: "menuBarTitleMaxLength") as? Int
+        self.menuBarTitleMaxLength = storedMaxLength ?? 40 // default: ~40 characters
+        let storedShowNoMeetingsText = UserDefaults.standard.object(forKey: "showNoMeetingsText") as? Bool
+        self.showNoMeetingsText = storedShowNoMeetingsText ?? true // default: show the text
     }
 
     func start() {
