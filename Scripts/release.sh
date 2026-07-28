@@ -20,11 +20,18 @@ echo "Building HeadsUp $VERSION..."
 
 if [ -n "${APPLE_NOTARY_KEY_ID:-}" ] && [ -n "${APPLE_NOTARY_ISSUER_ID:-}" ] && [ -n "${APPLE_NOTARY_KEY_PATH:-}" ]; then
     echo "Submitting $DMG_NAME for notarization..."
+    # Apple's notary service occasionally leaves submissions stuck "In Progress" for a
+    # very long time (a known, recurring issue, not specific to this project — see Apple
+    # Developer Forums). --timeout bounds how long this waits so a stuck submission fails
+    # the build instead of hanging indefinitely and burning CI minutes. The submission
+    # itself isn't cancelled by this timeout; check its status with
+    # `xcrun notarytool info <id>` and rerun once it resolves.
     xcrun notarytool submit "$ROOT_DIR/build/$DMG_NAME" \
         --key "$APPLE_NOTARY_KEY_PATH" \
         --key-id "$APPLE_NOTARY_KEY_ID" \
         --issuer "$APPLE_NOTARY_ISSUER_ID" \
-        --wait
+        --wait \
+        --timeout 20m
 
     echo "Stapling notarization ticket..."
     xcrun stapler staple "$ROOT_DIR/build/$DMG_NAME"
