@@ -18,6 +18,20 @@ fi
 echo "Building HeadsUp $VERSION..."
 "$ROOT_DIR/Scripts/build_dmg.sh" release
 
+if [ -n "${APPLE_NOTARY_KEY_ID:-}" ] && [ -n "${APPLE_NOTARY_ISSUER_ID:-}" ] && [ -n "${APPLE_NOTARY_KEY_PATH:-}" ]; then
+    echo "Submitting $DMG_NAME for notarization..."
+    xcrun notarytool submit "$ROOT_DIR/build/$DMG_NAME" \
+        --key "$APPLE_NOTARY_KEY_PATH" \
+        --key-id "$APPLE_NOTARY_KEY_ID" \
+        --issuer "$APPLE_NOTARY_ISSUER_ID" \
+        --wait
+
+    echo "Stapling notarization ticket..."
+    xcrun stapler staple "$ROOT_DIR/build/$DMG_NAME"
+else
+    echo "Skipping notarization (APPLE_NOTARY_KEY_ID / APPLE_NOTARY_ISSUER_ID / APPLE_NOTARY_KEY_PATH not set)."
+fi
+
 echo "Preparing appcast staging directory..."
 rm -rf "$STAGING_DIR"
 mkdir -p "$STAGING_DIR"

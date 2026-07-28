@@ -84,6 +84,26 @@ Implications for agents:
   unless the user explicitly asks to cut a release — it pushes to `main` and publishes a
   public GitHub Release.
 
+### Code signing & notarization
+
+`Scripts/build_app.sh` signs with a real Developer ID identity when one's available —
+either `CODESIGN_IDENTITY` env var, or auto-detected from a "Developer ID Application"
+cert in the active keychain — and falls back to ad-hoc signing otherwise (fine for local
+dev, not sufficient for a public release: unsigned/ad-hoc builds get Gatekeeper's "Not
+Opened" warning). `Scripts/release.sh` notarizes and staples the `.dmg` via
+`xcrun notarytool`/`stapler` when `APPLE_NOTARY_KEY_ID`, `APPLE_NOTARY_ISSUER_ID`, and
+`APPLE_NOTARY_KEY_PATH` are set, and skips it otherwise.
+
+In CI, `.github/workflows/release.yml` imports the signing cert from the
+`APPLE_CERTIFICATE_P12_BASE64` / `APPLE_CERTIFICATE_PASSWORD` secrets into a throwaway
+keychain (protected by a random password generated inline for that one job — it only
+needs to exist, not be remembered, so it isn't stored as a secret) before `build_app.sh`
+runs, and writes the notary API key from `APPLE_NOTARY_KEY_P8_BASE64` to a temp file,
+alongside the `APPLE_NOTARY_KEY_ID` / `APPLE_NOTARY_ISSUER_ID` secrets. Notarization must
+happen *before* `Scripts/release.sh` generates the Sparkle appcast entry — stapling
+modifies the `.dmg` bytes, and the appcast's EdDSA signature has to match what's actually
+uploaded. None of these secrets should ever appear in source, scripts, or commits.
+
 ## Toolchain note
 
 Built with Xcode 14.1 / Swift 5.7 (`swift-tools-version:5.7` in `Package.swift`), which

@@ -36,13 +36,32 @@ cp -R "$SPARKLE_FRAMEWORK" "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework"
 
 install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
-echo "Ad-hoc code signing..."
+# CODESIGN_IDENTITY can be set explicitly (CI does this after importing a cert into a
+# fresh keychain). Locally, auto-detect a "Developer ID Application" identity if one's
+# in the login keychain; otherwise fall back to ad-hoc signing (dev-only, no notarization).
+SIGN_IDENTITY="${CODESIGN_IDENTITY:-}"
+if [ -z "$SIGN_IDENTITY" ]; then
+    SIGN_IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.*)"/\1/' || true)
+fi
+
 SPARKLE_DIR="$APP_BUNDLE/Contents/Frameworks/Sparkle.framework"
-codesign --force --sign - "$SPARKLE_DIR/Versions/B/XPCServices/Downloader.xpc"
-codesign --force --sign - "$SPARKLE_DIR/Versions/B/XPCServices/Installer.xpc"
-codesign --force --sign - "$SPARKLE_DIR/Versions/B/Autoupdate"
-codesign --force --sign - "$SPARKLE_DIR/Versions/B/Updater.app"
-codesign --force --sign - "$SPARKLE_DIR"
-codesign --force --deep --sign - "$APP_BUNDLE"
+if [ -n "$SIGN_IDENTITY" ]; then
+    echo "Code signing with $SIGN_IDENTITY..."
+    SIGN_EXTRA_ARGS="--options runtime --timestamp"
+else
+    echo "Ad-hoc code signing (no Developer ID identity found — set CODESIGN_IDENTITY to sign for notarization)..."
+    SIGN_IDENTITY="-"
+    SIGN_EXTRA_ARGS=""
+fi
+
+# $SIGN_EXTRA_ARGS is deliberately unquoted below to word-split (or vanish when empty) —
+# macOS's default /bin/bash is 3.2, where "${empty_array[@]}" throws "unbound variable"
+# under `set -u`, so a plain string is used instead of an array.
+codesign --force --sign "$SIGN_IDENTITY" $SIGN_EXTRA_ARGS "$SPARKLE_DIR/Versions/B/XPCServices/Downloader.xpc"
+codesign --force --sign "$SIGN_IDENTITY" $SIGN_EXTRA_ARGS "$SPARKLE_DIR/Versions/B/XPCServices/Installer.xpc"
+codesign --force --sign "$SIGN_IDENTITY" $SIGN_EXTRA_ARGS "$SPARKLE_DIR/Versions/B/Autoupdate"
+codesign --force --sign "$SIGN_IDENTITY" $SIGN_EXTRA_ARGS "$SPARKLE_DIR/Versions/B/Updater.app"
+codesign --force --sign "$SIGN_IDENTITY" $SIGN_EXTRA_ARGS "$SPARKLE_DIR"
+codesign --force --deep --sign "$SIGN_IDENTITY" $SIGN_EXTRA_ARGS "$APP_BUNDLE"
 
 echo "Done: $APP_BUNDLE"
