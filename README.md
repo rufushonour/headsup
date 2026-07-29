@@ -12,23 +12,18 @@ A macOS menu-bar app that blocks your screen full-screen just before a meeting s
 
 ## What it does
 
-- Reads events from every calendar connected to macOS Calendar (Google, Outlook, iCloud — anything Calendar.app syncs) via EventKit.
-- Detects a meeting join link on each event, checking the event URL, then location, then notes, preferring known providers (Zoom, Google Meet, Teams, Webex, and others — see `Sources/HeadsUp/MeetingLink.swift`).
-- Shows a full-screen, borderless alert on every display — above other windows and full-screen apps — a configurable amount of time before each meeting (default: 1 minute before).
-- Alert has Join, Snooze, and Dismiss; snooze duration is configurable per-alert (a quick default, or a menu of other lengths) as well as in Settings.
-- If two meetings overlap, both are shown together rather than silently picking one.
-- The tray icon switches to a filled state while a meeting is in progress.
+- Reads every calendar connected to macOS Calendar (Google, Outlook, iCloud, anything Calendar.app syncs) and auto-detects join links — Zoom, Meet, Teams, Webex, and more (see `Sources/HeadsUp/MeetingLink.swift`).
+- Full-screen alert on every display shortly before each meeting (default: 1 minute), with Join, Snooze, and Dismiss.
+- Overlapping meetings are shown together instead of silently picking one; the tray icon fills in while a meeting's in progress.
 
 <p align="center">
   <img src="Resources/screenshots/menubar_icon.png" alt="Menu bar icon"> &nbsp;&nbsp;&nbsp;
   <img src="Resources/screenshots/tray_menu.png" width="260" alt="Tray dropdown menu">
 </p>
 
-- Menu bar dropdown lists the rest of today's meetings, each with a Join icon if a link was detected, or its location (e.g. a room name) if not.
-- A "Grant Calendar Access…" item appears in the tray whenever access isn't authorized, and a "Check for Updates…" item for manual update checks.
-- A proper Settings window (Cmd+, or the tray menu) for the default alert lead time, snooze duration, per-calendar include/exclude + lead-time override, menu bar title length, and automatic update checks.
-- A first-launch Welcome screen explaining what the app does before asking for Calendar access.
-- "Send Test Alert" and "Send Feedback…" (opens GitHub Issues) menu items.
+- Tray dropdown lists the rest of today's meetings, prompts for Calendar access if needed, and has quick actions: test alert, check for updates, send feedback.
+- Settings covers alert timing, snooze duration, per-calendar overrides, and menu bar display.
+- First-launch Welcome screen walks through what the app does before asking for access.
 
 <p align="center">
   <img src="Resources/screenshots/welcome.png" width="380" alt="Welcome screen"> &nbsp;&nbsp;&nbsp;
@@ -45,7 +40,7 @@ The app is signed with a Developer ID and notarized by Apple, so it opens normal
 
 ## Requirements
 
-- macOS 13+. Uses the granular macOS 14+ EventKit permission API when available, falling back to the legacy API on macOS 13.
+- macOS 13+.
 - Calendar access — macOS prompts on first launch. Approve it in System Settings → Privacy & Security → Calendars if you miss the prompt.
 
 ## Build & run
@@ -56,7 +51,7 @@ The app is signed with a Developer ID and notarized by Apple, so it opens normal
 open build/HeadsUp.app
 ```
 
-The script compiles via Swift Package Manager, packages the binary into a proper `.app` bundle with `Info.plist` (needed for the Calendar permission prompt to attach to the app rather than to Terminal), and signs it — ad-hoc by default, which is what you want for local development. Set `CODESIGN_IDENTITY` to sign with a Developer ID instead (only useful alongside notarization, e.g. via `release.sh`; an unnotarized Developer ID signature is rejected more aggressively by Gatekeeper than ad-hoc and will silently break Calendar access prompts — see `AGENTS.md`).
+The script compiles via Swift Package Manager, packages the binary into a proper `.app` bundle with `Info.plist` (needed for the Calendar permission prompt to attach to the app rather than to Terminal), and ad-hoc code-signs it. Ad-hoc is the right choice for local dev — see `AGENTS.md` if you need `CODESIGN_IDENTITY` for something release-related.
 
 To build the `.dmg` used for GitHub Releases:
 
@@ -100,7 +95,3 @@ swift run   # note: permission prompts attach to whatever process invokes EventK
 - `Scripts/release.sh` — builds the `.dmg`, notarizes it, and generates a signed `appcast.xml` entry; used locally and by CI.
 - `Scripts/cut_release.sh` — bumps `Info.plist`'s version and pushes the matching tag to trigger a release.
 - `.github/workflows/release.yml` — on tag push, imports the signing cert, runs `release.sh`, commits `appcast.xml`, and publishes the GitHub Release.
-
-## Feedback
-
-Found a bug or have a suggestion? Use "Send Feedback…" in the tray menu, or open an issue directly on [GitHub](https://github.com/rufushonour/headsup/issues).
