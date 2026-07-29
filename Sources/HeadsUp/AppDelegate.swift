@@ -70,9 +70,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func completeOnboarding() {
         UserDefaults.standard.set(true, forKey: Self.hasCompletedOnboardingKey)
-        calendarService.start()
-        welcomeWindowController.window?.close()
-        settingsWindowController.show()
+        // Wait for the calendar access request to settle before swapping windows —
+        // closing the Welcome window immediately can yank away the window the system
+        // permission dialog needs to attach to, before it's had a chance to appear
+        // (same underlying issue as requestCalendarAccessAsRegularApp).
+        calendarService.start { [weak self] in
+            guard let self else { return }
+            self.welcomeWindowController.window?.close()
+            self.settingsWindowController.show()
+        }
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
