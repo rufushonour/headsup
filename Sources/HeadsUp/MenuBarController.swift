@@ -24,6 +24,9 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     /// active app with a window — state this controller doesn't own.
     var onRequestCalendarAccess: (() -> Void)?
 
+    /// Triggers a Sparkle update check. Handled by AppDelegate, which owns the updater.
+    var onCheckForUpdates: (() -> Void)?
+
     init(calendarService: CalendarService) {
         self.calendarService = calendarService
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -174,6 +177,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         settings.target = self
         menu.addItem(settings)
 
+        let checkForUpdates = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
+        checkForUpdates.target = self
+        menu.addItem(checkForUpdates)
+
         let feedback = NSMenuItem(title: "Send Feedback…", action: #selector(sendFeedback), keyEquivalent: "")
         feedback.target = self
         menu.addItem(feedback)
@@ -227,6 +234,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func openSettings() {
         onOpenSettings?()
+    }
+
+    @objc private func checkForUpdates() {
+        onCheckForUpdates?()
     }
 
     @objc private func sendFeedback() {

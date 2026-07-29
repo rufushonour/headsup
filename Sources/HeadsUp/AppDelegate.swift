@@ -38,6 +38,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuBarController?.onRequestCalendarAccess = { [weak self] in
             self?.requestCalendarAccessAsRegularApp()
         }
+        menuBarController?.onCheckForUpdates = { [weak self] in
+            self?.updaterController.updater.checkForUpdates()
+        }
         calendarService.onMeetingDue = { [weak self] meeting in
             self?.presentAlert(for: meeting)
         }
