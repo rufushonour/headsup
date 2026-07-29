@@ -6,15 +6,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let calendarService = CalendarService()
     private let alertPresenter = AlertPresenter()
     private var menuBarController: MenuBarController?
-    private lazy var settingsWindowController = SettingsWindowController(calendarService: calendarService)
-    private lazy var welcomeWindowController = WelcomeWindowController(onContinue: { [weak self] in
-        self?.completeOnboarding()
-    })
     private lazy var updaterController = SPUStandardUpdaterController(
         startingUpdater: true,
         updaterDelegate: nil,
         userDriverDelegate: nil
     )
+    private lazy var settingsWindowController = SettingsWindowController(
+        calendarService: calendarService,
+        updater: updaterController.updater
+    )
+    private lazy var welcomeWindowController = WelcomeWindowController(onContinue: { [weak self] in
+        self?.completeOnboarding()
+    })
 
     private static let hasCompletedOnboardingKey = "hasCompletedOnboarding"
 
@@ -32,14 +35,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuBarController?.onQuit = {
             NSApp.terminate(nil)
         }
+        menuBarController?.onRequestCalendarAccess = { [weak self] in
+            self?.requestCalendarAccessAsRegularApp()
+        }
         calendarService.onMeetingDue = { [weak self] meeting in
             self?.presentAlert(for: meeting)
         }
 
         if UserDefaults.standard.bool(forKey: Self.hasCompletedOnboardingKey) {
-            calendarService.start()
+            requestCalendarAccessAsRegularApp()
         } else {
             welcomeWindowController.show()
+        }
+    }
+
+    /// As an accessory app (no Dock icon at rest, see SettingsWindowController /
+    /// WelcomeWindowController for the same pattern around their own windows), the
+    /// system Calendar access dialog can be created but never actually surface unless
+    /// we're briefly promoted to a regular, active app — plain `NSApp.activate` with no
+    /// window at all isn't enough. Reverts back to accessory once the request settles,
+    /// unless a real window (Settings/Welcome) is open by then.
+    private func requestCalendarAccessAsRegularApp() {
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        calendarService.start { [weak self] in
+            guard let self else { return }
+            let hasVisibleWindow = self.settingsWindowController.window?.isVisible == true
+                || self.welcomeWindowController.window?.isVisible == true
+            if !hasVisibleWindow {
+                NSApp.setActivationPolicy(.accessory)
+            }
         }
     }
 

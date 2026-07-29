@@ -52,6 +52,13 @@ jobs:
           EXISTING_KEYCHAINS=$(security list-keychains -d user | sed 's/"//g')
           security list-keychains -d user -s "$KEYCHAIN_PATH" $EXISTING_KEYCHAINS
 
+          # build_app.sh no longer auto-detects a keychain identity (that auto-detection
+          # used to make local dev builds silently sign with an unnotarized Developer ID,
+          # which Gatekeeper rejects and which breaks TCC prompts with no visible error).
+          # So CI has to pass it explicitly.
+          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.*)"/\1/')
+          echo "CODESIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+
       - name: Save notarization API key
         env:
           APPLE_NOTARY_KEY_P8_BASE64: ${{ secrets.APPLE_NOTARY_KEY_P8_BASE64 }}

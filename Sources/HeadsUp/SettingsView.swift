@@ -1,5 +1,6 @@
 import SwiftUI
 import EventKit
+import Sparkle
 
 private let leadTimeOptions: [(title: String, seconds: TimeInterval)] = [
     ("At start time", 0),
@@ -15,15 +16,11 @@ private let snoozeDurationOptions: [(title: String, seconds: TimeInterval)] = [
     ("15 minutes", 900)
 ]
 
-private let menuBarTitleLengthOptions: [(title: String, characters: Int)] = [
-    ("Short", 20),
-    ("Medium", 40),
-    ("Long", 60),
-    ("No limit", 0)
-]
+private let menuBarTitleLengthRange: ClosedRange<Double> = 10...80
 
 struct SettingsView: View {
     @ObservedObject var calendarService: CalendarService
+    let updater: SPUUpdater
 
     var body: some View {
         VStack(spacing: 0) {
@@ -54,12 +51,22 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Picker(selection: $calendarService.menuBarTitleMaxLength) {
-                        ForEach(menuBarTitleLengthOptions, id: \.characters) { option in
-                            Text(option.title).tag(option.characters)
+                    Toggle(isOn: automaticallyChecksForUpdatesBinding) {
+                        Label("Automatically check for updates", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                } header: {
+                    Text("Updates")
+                }
+
+                Section {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Label("Meeting title length", systemImage: "textformat.size")
+                            Spacer()
+                            Text(menuBarTitleLengthLabel)
+                                .foregroundColor(.secondary)
                         }
-                    } label: {
-                        Label("Meeting title length", systemImage: "textformat.size")
+                        Slider(value: menuBarTitleLengthBinding, in: menuBarTitleLengthRange, step: 5)
                     }
                     Toggle(isOn: $calendarService.showNoMeetingsText) {
                         Label("Show \"No upcoming meetings\" text", systemImage: "text.bubble")
@@ -84,6 +91,29 @@ struct SettingsView: View {
             .formStyle(.grouped)
         }
         .frame(width: 500, height: 520)
+    }
+
+    private var automaticallyChecksForUpdatesBinding: Binding<Bool> {
+        Binding(
+            get: { updater.automaticallyChecksForUpdates },
+            set: { updater.automaticallyChecksForUpdates = $0 }
+        )
+    }
+
+    private var menuBarTitleLengthBinding: Binding<Double> {
+        Binding(
+            get: {
+                let stored = calendarService.menuBarTitleMaxLength
+                return stored == 0 ? menuBarTitleLengthRange.upperBound : Double(stored)
+            },
+            set: { newValue in
+                calendarService.menuBarTitleMaxLength = newValue >= menuBarTitleLengthRange.upperBound ? 0 : Int(newValue)
+            }
+        )
+    }
+
+    private var menuBarTitleLengthLabel: String {
+        calendarService.menuBarTitleMaxLength == 0 ? "No limit" : "\(calendarService.menuBarTitleMaxLength) characters"
     }
 
     private var header: some View {

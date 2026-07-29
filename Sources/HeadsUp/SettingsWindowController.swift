@@ -1,10 +1,11 @@
 import AppKit
 import SwiftUI
+import Sparkle
 
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
-    convenience init(calendarService: CalendarService) {
-        let view = SettingsView(calendarService: calendarService)
+    convenience init(calendarService: CalendarService, updater: SPUUpdater) {
+        let view = SettingsView(calendarService: calendarService, updater: updater)
         let hosting = NSHostingController(rootView: view)
         let window = NSWindow(contentViewController: hosting)
         window.title = "Heads Up Settings"

@@ -4,7 +4,7 @@ import Combine
 
 /// Owns the NSStatusItem: shows the next meeting at a glance and exposes
 /// quick actions plus an entry point into the Settings window.
-final class MenuBarController {
+final class MenuBarController: NSObject, NSMenuDelegate {
 
     private let statusItem: NSStatusItem
     private let calendarService: CalendarService
@@ -19,25 +19,36 @@ final class MenuBarController {
     /// Quits the app (equivalent to Cmd+Q / Dock Quit).
     var onQuit: (() -> Void)?
 
+    /// Requests calendar access. Handled by AppDelegate rather than here, since
+    /// reliably surfacing the system dialog requires briefly promoting to a regular,
+    /// active app with a window — state this controller doesn't own.
+    var onRequestCalendarAccess: (() -> Void)?
+
     init(calendarService: CalendarService) {
         self.calendarService = calendarService
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        super.init()
 
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "bell.badge", accessibilityDescription: "Heads Up")
+            button.image = Self.statusBarIcon(named: "bell.badge")
+            // Without this, the icon's position shifts depending on whether the title is
+            // empty (icon-only mode, e.g. "No upcoming meetings" text toggled off) or has
+            // text — pin it explicitly so it stays put across all title states.
+            button.imagePosition = .imageLeft
         }
 
-        calendarService.$nextMeeting
+        calendarService.$nextMeetings
             .combineLatest(calendarService.$authorized, calendarService.$menuBarTitleMaxLength, calendarService.$showNoMeetingsText)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] meeting, authorized, maxLength, showNoMeetingsText in
-                self?.updateTitle(meeting: meeting, authorized: authorized, maxLength: maxLength, showNoMeetingsText: showNoMeetingsText)
+            .sink { [weak self] meetings, authorized, maxLength, showNoMeetingsText in
+                self?.updateTitle(meetings: meetings, authorized: authorized, maxLength: maxLength, showNoMeetingsText: showNoMeetingsText)
             }
             .store(in: &cancellables)
 
         calendarService.$todaysMeetings
+            .combineLatest(calendarService.$authorized)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
+            .sink { [weak self] _, _ in
                 guard let self else { return }
                 self.statusItem.menu = self.buildMenu()
             }
@@ -46,17 +57,49 @@ final class MenuBarController {
         statusItem.menu = buildMenu()
     }
 
-    private func updateTitle(meeting: UpcomingMeeting?, authorized: Bool, maxLength: Int, showNoMeetingsText: Bool) {
+    /// SF Symbols' own alignment rect isn't always vertically symmetric within its
+    /// bounding box (`bell.badge` has 5pt above the glyph but only 3pt below, which reads
+    /// as visibly off-center at menu bar size) — pad the shorter margin to match the
+    /// longer one so the rendered glyph sits centered regardless of the symbol's own quirks.
+    private static func statusBarIcon(named systemName: String) -> NSImage? {
+        guard let original = NSImage(systemSymbolName: systemName, accessibilityDescription: "Heads Up") else {
+            return nil
+        }
+        let alignmentRect = original.alignmentRect
+        let topMargin = original.size.height - alignmentRect.maxY
+        let bottomMargin = alignmentRect.minY
+        guard abs(topMargin - bottomMargin) > 0.01 else { return original }
+
+        let extraTop = max(0, bottomMargin - topMargin)
+        let extraBottom = max(0, topMargin - bottomMargin)
+        let newSize = NSSize(width: original.size.width, height: original.size.height + extraTop + extraBottom)
+
+        let padded = NSImage(size: newSize)
+        padded.lockFocus()
+        original.draw(at: NSPoint(x: 0, y: extraBottom), from: .zero, operation: .sourceOver, fraction: 1.0)
+        padded.unlockFocus()
+        padded.isTemplate = original.isTemplate
+        padded.accessibilityDescription = original.accessibilityDescription
+        return padded
+    }
+
+    private func updateTitle(meetings: [UpcomingMeeting], authorized: Bool, maxLength: Int, showNoMeetingsText: Bool) {
         guard let button = statusItem.button else { return }
+
+        let isInProgress = meetings.contains { Date() >= $0.startDate && Date() < $0.endDate }
+        button.image = Self.statusBarIcon(named: isInProgress ? "bell.badge.fill" : "bell.badge")
+
         if !authorized {
             button.title = " Calendar access needed"
-        } else if let meeting {
+        } else if let first = meetings.first {
             let formatter = DateFormatter()
             formatter.timeStyle = .short
-            let title = truncated(meeting.title, maxLength: maxLength)
-            button.title = " \(title) at \(formatter.string(from: meeting.startDate))"
+            // meetings.count > 1 means they overlap in time — show every one of them
+            // rather than silently picking just the first, so conflicts stay visible.
+            let titles = meetings.map { truncated($0.title, maxLength: maxLength) }.joined(separator: " + ")
+            button.title = " \(titles) at \(formatter.string(from: first.startDate))"
         } else if showNoMeetingsText {
-            button.title = " No upcoming meetings"
+            button.title = " \(truncated("No upcoming meetings", maxLength: maxLength))"
         } else {
             button.title = ""
         }
@@ -69,28 +112,49 @@ final class MenuBarController {
 
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
+        menu.delegate = self
+        populateMenu(menu)
+        return menu
+    }
+
+    /// Rebuilds `menu`'s items in place. Used both to build a fresh menu and, via
+    /// `menuWillOpen`, to refresh the menu that's about to be shown synchronously —
+    /// important because a calendar access grant made externally via System Settings
+    /// isn't pushed to us by EventKit, so we only find out by checking on open.
+    private func populateMenu(_ menu: NSMenu) {
+        menu.removeAllItems()
         menu.autoenablesItems = false
 
-        let meetings = calendarService.todaysMeetings
-        if meetings.isEmpty {
-            let empty = NSMenuItem(title: "No more meetings today", action: nil, keyEquivalent: "")
-            empty.isEnabled = false
-            menu.addItem(empty)
+        if !calendarService.authorized {
+            let notice = NSMenuItem(title: "Calendar access needed", action: nil, keyEquivalent: "")
+            notice.isEnabled = false
+            menu.addItem(notice)
+
+            let grantAccess = NSMenuItem(title: "Grant Calendar Access…", action: #selector(grantCalendarAccess), keyEquivalent: "")
+            grantAccess.target = self
+            menu.addItem(grantAccess)
         } else {
-            for meeting in meetings {
-                let item = NSMenuItem(
-                    title: meetingTitle(for: meeting),
-                    action: meeting.joinURL != nil ? #selector(joinMeeting(_:)) : nil,
-                    keyEquivalent: ""
-                )
-                item.target = self
-                item.representedObject = meeting.joinURL
-                if meeting.joinURL != nil {
-                    item.image = NSImage(systemSymbolName: "video.fill", accessibilityDescription: "Join")
-                } else if let location = meeting.location, !location.isEmpty {
-                    item.image = NSImage(systemSymbolName: "mappin.and.ellipse", accessibilityDescription: "Location")
+            let meetings = calendarService.todaysMeetings
+            if meetings.isEmpty {
+                let empty = NSMenuItem(title: "No more meetings today", action: nil, keyEquivalent: "")
+                empty.isEnabled = false
+                menu.addItem(empty)
+            } else {
+                for meeting in meetings {
+                    let item = NSMenuItem(
+                        title: meetingTitle(for: meeting),
+                        action: meeting.joinURL != nil ? #selector(joinMeeting(_:)) : nil,
+                        keyEquivalent: ""
+                    )
+                    item.target = self
+                    item.representedObject = meeting.joinURL
+                    if meeting.joinURL != nil {
+                        item.image = NSImage(systemSymbolName: "video.fill", accessibilityDescription: "Join")
+                    } else if let location = meeting.location, !location.isEmpty {
+                        item.image = NSImage(systemSymbolName: "mappin.and.ellipse", accessibilityDescription: "Location")
+                    }
+                    menu.addItem(item)
                 }
-                menu.addItem(item)
             }
         }
 
@@ -110,13 +174,20 @@ final class MenuBarController {
         settings.target = self
         menu.addItem(settings)
 
+        let feedback = NSMenuItem(title: "Send Feedback…", action: #selector(sendFeedback), keyEquivalent: "")
+        feedback.target = self
+        menu.addItem(feedback)
+
         menu.addItem(.separator())
 
         let quit = NSMenuItem(title: "Quit Heads Up", action: #selector(quitApp), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
+    }
 
-        return menu
+    func menuWillOpen(_ menu: NSMenu) {
+        calendarService.refreshAuthorizationStatus()
+        populateMenu(menu)
     }
 
     private func meetingTitle(for meeting: UpcomingMeeting) -> String {
@@ -140,12 +211,28 @@ final class MenuBarController {
         }
     }
 
+    @objc private func grantCalendarAccess() {
+        if calendarService.canRequestAccess {
+            onRequestCalendarAccess?()
+        } else if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
+            // Already decided (most likely denied) — macOS won't prompt again, so send
+            // the user straight to the Calendars privacy pane to flip it themselves.
+            NSWorkspace.shared.open(url)
+        }
+    }
+
     @objc private func sendTestAlert() {
         onTestAlert?()
     }
 
     @objc private func openSettings() {
         onOpenSettings?()
+    }
+
+    @objc private func sendFeedback() {
+        if let url = URL(string: "https://github.com/rufushonour/headsup/issues") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     @objc private func quitApp() {

@@ -16,7 +16,9 @@ struct UpcomingMeeting: Identifiable {
 final class CalendarService: ObservableObject {
 
     @Published private(set) var authorized = false
-    @Published private(set) var nextMeeting: UpcomingMeeting?
+    /// The soonest upcoming meeting(s) — more than one when they overlap in time, so
+    /// conflicting meetings are never silently hidden behind a single "next" pick.
+    @Published private(set) var nextMeetings: [UpcomingMeeting] = []
     @Published private(set) var todaysMeetings: [UpcomingMeeting] = []
     @Published private(set) var availableCalendars: [EKCalendar] = []
 
@@ -106,17 +108,39 @@ final class CalendarService: ObservableObject {
         self.showNoMeetingsText = storedShowNoMeetingsText ?? true // default: show the text
     }
 
-    func start() {
+    func start(completion: (() -> Void)? = nil) {
         requestAccess { [weak self] granted in
             guard let self else { return }
             self.authorized = granted
-            guard granted else { return }
-            self.refreshAvailableCalendars()
-            self.poll()
-            self.pollTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
-                self?.refreshAvailableCalendars()
-                self?.poll()
+            if granted {
+                self.beginPolling()
             }
+            completion?()
+        }
+    }
+
+    /// Whether requesting access would show the system prompt. Once the user has
+    /// answered (either way), macOS won't prompt again — `refreshAuthorizationStatus`
+    /// handles noticing a subsequent grant made via System Settings instead.
+    var canRequestAccess: Bool {
+        EKEventStore.authorizationStatus(for: .event) == .notDetermined
+    }
+
+    /// Re-checks authorization without prompting, to pick up a grant made externally via
+    /// System Settings while the app was already running (EventKit doesn't notify this).
+    func refreshAuthorizationStatus() {
+        guard !authorized, EKEventStore.authorizationStatus(for: .event) == .authorized else { return }
+        authorized = true
+        beginPolling()
+    }
+
+    private func beginPolling() {
+        guard pollTimer == nil else { return }
+        refreshAvailableCalendars()
+        poll()
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
+            self?.refreshAvailableCalendars()
+            self?.poll()
         }
     }
 
@@ -161,7 +185,7 @@ final class CalendarService: ObservableObject {
         let includedCalendars = availableCalendars.filter(isIncluded)
 
         guard !includedCalendars.isEmpty else {
-            nextMeeting = nil
+            nextMeetings = []
             todaysMeetings = []
             return
         }
@@ -171,8 +195,14 @@ final class CalendarService: ObservableObject {
             .filter { !$0.isAllDay }
             .sorted { $0.startDate < $1.startDate }
 
-        nextMeeting = events.first.map(makeMeeting)
         todaysMeetings = events.map(makeMeeting)
+        if let soonest = events.first {
+            nextMeetings = events
+                .filter { $0.startDate < soonest.endDate && $0.endDate > soonest.startDate }
+                .map(makeMeeting)
+        } else {
+            nextMeetings = []
+        }
 
         for event in events where event.startDate <= windowEnd {
             let key = eventKey(event)

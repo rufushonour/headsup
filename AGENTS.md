@@ -86,23 +86,30 @@ Implications for agents:
 
 ### Code signing & notarization
 
-`Scripts/build_app.sh` signs with a real Developer ID identity when one's available —
-either `CODESIGN_IDENTITY` env var, or auto-detected from a "Developer ID Application"
-cert in the active keychain — and falls back to ad-hoc signing otherwise (fine for local
-dev, not sufficient for a public release: unsigned/ad-hoc builds get Gatekeeper's "Not
-Opened" warning). `Scripts/release.sh` notarizes and staples the `.dmg` via
+`Scripts/build_app.sh` signs ad-hoc **by default**, and only uses a real Developer ID
+identity when `CODESIGN_IDENTITY` is explicitly set. This is deliberate, not an
+oversight — it used to auto-detect any "Developer ID Application" cert sitting in the
+active keychain, which meant that as soon as such a cert existed locally (e.g. for
+testing the release pipeline), *every* local dev build silently signed with a real
+identity but no notarization. Gatekeeper rejects that combination
+(`source=Unnotarized Developer ID`) more aggressively than plain ad-hoc signing, and that
+rejection silently breaks TCC prompts (Calendar access, etc.) — no dialog, no error, just
+`granted=false`. That cost a long debugging session to track down. Don't reintroduce the
+auto-detect. `Scripts/release.sh` notarizes and staples the `.dmg` via
 `xcrun notarytool`/`stapler` when `APPLE_NOTARY_KEY_ID`, `APPLE_NOTARY_ISSUER_ID`, and
 `APPLE_NOTARY_KEY_PATH` are set, and skips it otherwise.
 
 In CI, `.github/workflows/release.yml` imports the signing cert from the
 `APPLE_CERTIFICATE_P12_BASE64` / `APPLE_CERTIFICATE_PASSWORD` secrets into a throwaway
 keychain (protected by a random password generated inline for that one job — it only
-needs to exist, not be remembered, so it isn't stored as a secret) before `build_app.sh`
-runs, and writes the notary API key from `APPLE_NOTARY_KEY_P8_BASE64` to a temp file,
-alongside the `APPLE_NOTARY_KEY_ID` / `APPLE_NOTARY_ISSUER_ID` secrets. Notarization must
-happen *before* `Scripts/release.sh` generates the Sparkle appcast entry — stapling
-modifies the `.dmg` bytes, and the appcast's EdDSA signature has to match what's actually
-uploaded. None of these secrets should ever appear in source, scripts, or commits.
+needs to exist, not be remembered, so it isn't stored as a secret), then explicitly
+computes the identity from that keychain and exports it as `CODESIGN_IDENTITY` — since
+`build_app.sh` won't auto-detect it — before writing the notary API key from
+`APPLE_NOTARY_KEY_P8_BASE64` to a temp file, alongside the `APPLE_NOTARY_KEY_ID` /
+`APPLE_NOTARY_ISSUER_ID` secrets. Notarization must happen *before*
+`Scripts/release.sh` generates the Sparkle appcast entry — stapling modifies the `.dmg`
+bytes, and the appcast's EdDSA signature has to match what's actually uploaded. None of
+these secrets should ever appear in source, scripts, or commits.
 
 ## Toolchain note
 

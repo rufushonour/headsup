@@ -36,20 +36,21 @@ cp -R "$SPARKLE_FRAMEWORK" "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework"
 
 install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
-# CODESIGN_IDENTITY can be set explicitly (CI does this after importing a cert into a
-# fresh keychain). Locally, auto-detect a "Developer ID Application" identity if one's
-# in the login keychain; otherwise fall back to ad-hoc signing (dev-only, no notarization).
+# Ad-hoc signing is the default on purpose: a Developer ID signature *without*
+# notarization is rejected by Gatekeeper (source=Unnotarized Developer ID), and that
+# rejection silently breaks TCC prompts (Calendar access, etc.) with no visible dialog
+# and no error — a real bug hunted down the hard way. So local dev builds stay ad-hoc
+# unless CODESIGN_IDENTITY is explicitly set (CI sets it after importing a cert and
+# pairs it with real notarization — see release.sh). Don't reintroduce auto-detecting a
+# keychain identity here.
 SIGN_IDENTITY="${CODESIGN_IDENTITY:-}"
-if [ -z "$SIGN_IDENTITY" ]; then
-    SIGN_IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.*)"/\1/' || true)
-fi
 
 SPARKLE_DIR="$APP_BUNDLE/Contents/Frameworks/Sparkle.framework"
 if [ -n "$SIGN_IDENTITY" ]; then
     echo "Code signing with $SIGN_IDENTITY..."
     SIGN_EXTRA_ARGS="--options runtime --timestamp"
 else
-    echo "Ad-hoc code signing (no Developer ID identity found — set CODESIGN_IDENTITY to sign for notarization)..."
+    echo "Ad-hoc code signing (set CODESIGN_IDENTITY to sign with a Developer ID — only useful if you'll also notarize, e.g. via release.sh)..."
     SIGN_IDENTITY="-"
     SIGN_EXTRA_ARGS=""
 fi
