@@ -163,9 +163,8 @@ private struct CalendarRow: View {
         VStack(alignment: .leading, spacing: 4) {
             Toggle(isOn: includedBinding) {
                 HStack(spacing: 8) {
-                    Circle()
-                        .fill(calendarColor)
-                        .frame(width: 9, height: 9)
+                    Image(systemName: "calendar.circle.fill")
+                        .foregroundColor(calendarColor)
                     VStack(alignment: .leading) {
                         Text(calendar.title)
                         Text(calendar.source.title)
