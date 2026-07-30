@@ -46,6 +46,8 @@ Don't add a test target speculatively — if you add real tests, wire them into
 - `AppDelegate.swift` / `main.swift` — wiring and entry point.
 - `Resources/Info.plist` — bundle metadata, including the Calendar usage description and
   the app version (`CFBundleShortVersionString`) used by the release pipeline.
+- `Resources/HeadsUp.entitlements` — hardened-runtime entitlements (see below); applied
+  only when signing with a real Developer ID.
 - `Scripts/` — build, packaging, and release automation (see below).
 
 ## Conventions
@@ -95,7 +97,25 @@ identity but no notarization. Gatekeeper rejects that combination
 (`source=Unnotarized Developer ID`) more aggressively than plain ad-hoc signing, and that
 rejection silently breaks TCC prompts (Calendar access, etc.) — no dialog, no error, just
 `granted=false`. That cost a long debugging session to track down. Don't reintroduce the
-auto-detect. `Scripts/release.sh` notarizes and staples the `.dmg` via
+auto-detect.
+
+Separately: hardened runtime (`--options runtime`, which real-identity builds get) makes
+TCC entitlement-gated for personal-info services. Without the
+`com.apple.security.personal-information.calendars` entitlement, tccd doesn't just deny
+the request — it refuses to even show the system prompt (`Policy disallows prompt` /
+`Prompting policy for hardened runtime; service: kTCCServiceCalendar requires
+entitlement ... but it is missing`, visible via `log stream --predicate 'process ==
+"tccd"'`). This is a second, independent way the exact same symptom (no Calendar prompt,
+no error) can happen on a real-Developer-ID build, distinct from the unnotarized-Gatekeeper
+issue above — both had to be fixed before hardened-runtime builds could ever prompt for
+Calendar access. `Resources/HeadsUp.entitlements` declares that entitlement, and
+`build_app.sh` passes `--entitlements` on the top-level app sign only when
+`CODESIGN_IDENTITY` is set (ad-hoc builds aren't hardened-runtime, so TCC doesn't enforce
+this and no entitlements file is needed). If a future permission is added (contacts,
+reminders, etc.), it needs its own entitlement here too, or it'll silently hit the same
+wall on notarized builds only — the ad-hoc dev build would keep working, masking it.
+
+`Scripts/release.sh` notarizes and staples the `.dmg` via
 `xcrun notarytool`/`stapler` when `APPLE_NOTARY_KEY_ID`, `APPLE_NOTARY_ISSUER_ID`, and
 `APPLE_NOTARY_KEY_PATH` are set, and skips it otherwise.
 

@@ -56,20 +56,27 @@ SPARKLE_DIR="$APP_BUNDLE/Contents/Frameworks/Sparkle.framework"
 if [ -n "$SIGN_IDENTITY" ]; then
     echo "Code signing with $SIGN_IDENTITY..."
     SIGN_EXTRA_ARGS="--options runtime --timestamp"
+    # Hardened runtime enforces entitlement-gated TCC prompts: without this entitlement,
+    # tccd silently denies Calendar access instead of showing the system prompt at all
+    # (no dialog, no error — "Policy disallows prompt" in the unified log). Ad-hoc builds
+    # never hit this because they don't have hardened runtime enabled. Only the top-level
+    # app needs it, not Sparkle's nested XPC helpers.
+    APP_ENTITLEMENTS_ARGS="--entitlements $ROOT_DIR/Resources/HeadsUp.entitlements"
 else
     echo "Ad-hoc code signing (set CODESIGN_IDENTITY to sign with a Developer ID — only useful if you'll also notarize, e.g. via release.sh)..."
     SIGN_IDENTITY="-"
     SIGN_EXTRA_ARGS=""
+    APP_ENTITLEMENTS_ARGS=""
 fi
 
-# $SIGN_EXTRA_ARGS is deliberately unquoted below to word-split (or vanish when empty) —
-# macOS's default /bin/bash is 3.2, where "${empty_array[@]}" throws "unbound variable"
-# under `set -u`, so a plain string is used instead of an array.
+# $SIGN_EXTRA_ARGS/$APP_ENTITLEMENTS_ARGS are deliberately unquoted below to word-split
+# (or vanish when empty) — macOS's default /bin/bash is 3.2, where "${empty_array[@]}"
+# throws "unbound variable" under `set -u`, so a plain string is used instead of an array.
 codesign --force --sign "$SIGN_IDENTITY" $SIGN_EXTRA_ARGS "$SPARKLE_DIR/Versions/B/XPCServices/Downloader.xpc"
 codesign --force --sign "$SIGN_IDENTITY" $SIGN_EXTRA_ARGS "$SPARKLE_DIR/Versions/B/XPCServices/Installer.xpc"
 codesign --force --sign "$SIGN_IDENTITY" $SIGN_EXTRA_ARGS "$SPARKLE_DIR/Versions/B/Autoupdate"
 codesign --force --sign "$SIGN_IDENTITY" $SIGN_EXTRA_ARGS "$SPARKLE_DIR/Versions/B/Updater.app"
 codesign --force --sign "$SIGN_IDENTITY" $SIGN_EXTRA_ARGS "$SPARKLE_DIR"
-codesign --force --deep --sign "$SIGN_IDENTITY" $SIGN_EXTRA_ARGS "$APP_BUNDLE"
+codesign --force --deep --sign "$SIGN_IDENTITY" $SIGN_EXTRA_ARGS $APP_ENTITLEMENTS_ARGS "$APP_BUNDLE"
 
 echo "Done: $APP_BUNDLE"
