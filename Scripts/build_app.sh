@@ -45,6 +45,13 @@ install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP_BUNDLE/Conte
 # keychain identity here.
 SIGN_IDENTITY="${CODESIGN_IDENTITY:-}"
 
+if [ -z "$SIGN_IDENTITY" ]; then
+    # Local ad-hoc dev builds get a separate bundle identifier from the shipped app, so
+    # local testing never shares (or resets) the real app's Calendar TCC grant, and so
+    # LaunchServices never has two different builds fighting over the same identity.
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier dev.rufushonour.headsup" "$APP_BUNDLE/Contents/Info.plist"
+fi
+
 SPARKLE_DIR="$APP_BUNDLE/Contents/Frameworks/Sparkle.framework"
 if [ -n "$SIGN_IDENTITY" ]; then
     echo "Code signing with $SIGN_IDENTITY..."

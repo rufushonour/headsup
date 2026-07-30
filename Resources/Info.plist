@@ -9,7 +9,7 @@
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>dev.rufushonour.headsup</string>
+	<string>com.rufushonour.headsup</string>
 	<key>CFBundleName</key>
 	<string>HeadsUp</string>
 	<key>CFBundlePackageType</key>

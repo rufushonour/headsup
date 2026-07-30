@@ -21,6 +21,11 @@ private let menuBarTitleLengthRange: ClosedRange<Double> = 10...80
 struct SettingsView: View {
     @ObservedObject var calendarService: CalendarService
     let updater: SPUUpdater
+    // Sparkle's own first-launch "check for updates automatically?" prompt can change
+    // updater.automaticallyChecksForUpdates from outside this view entirely, and plain
+    // property access gives SwiftUI no way to notice — so this is re-synced in onAppear
+    // rather than read live, otherwise the toggle can show a stale value.
+    @State private var automaticallyChecksForUpdates = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -51,8 +56,11 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Toggle(isOn: automaticallyChecksForUpdatesBinding) {
+                    Toggle(isOn: $automaticallyChecksForUpdates) {
                         Label("Automatically check for updates", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    .onChange(of: automaticallyChecksForUpdates) { newValue in
+                        updater.automaticallyChecksForUpdates = newValue
                     }
                 } header: {
                     Text("Updates")
@@ -91,13 +99,9 @@ struct SettingsView: View {
             .formStyle(.grouped)
         }
         .frame(width: 500, height: 520)
-    }
-
-    private var automaticallyChecksForUpdatesBinding: Binding<Bool> {
-        Binding(
-            get: { updater.automaticallyChecksForUpdates },
-            set: { updater.automaticallyChecksForUpdates = $0 }
-        )
+        .onAppear {
+            automaticallyChecksForUpdates = updater.automaticallyChecksForUpdates
+        }
     }
 
     private var menuBarTitleLengthBinding: Binding<Double> {

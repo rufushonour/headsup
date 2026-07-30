@@ -54,21 +54,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// As an accessory app (no Dock icon at rest, see SettingsWindowController /
     /// WelcomeWindowController for the same pattern around their own windows), the
-    /// system Calendar access dialog can be created but never actually surface unless
-    /// we're briefly promoted to a regular, active app — plain `NSApp.activate` with no
-    /// window at all isn't enough. Reverts back to accessory once the request settles,
-    /// unless a real window (Settings/Welcome) is open by then.
+    /// system Calendar access dialog can be created but never actually surface without
+    /// an actual key window present — promoting activation policy and calling
+    /// NSApp.activate alone isn't enough. Only shows Settings when we're actually about
+    /// to trigger a fresh prompt (canRequestAccess), so a normal launch with access
+    /// already decided doesn't pop Settings open for no reason. SettingsWindowController's
+    /// own windowWillClose already reverts to accessory when the user's done with it.
     private func requestCalendarAccessAsRegularApp() {
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
-        calendarService.start { [weak self] in
-            guard let self else { return }
-            let hasVisibleWindow = self.settingsWindowController.window?.isVisible == true
-                || self.welcomeWindowController.window?.isVisible == true
-            if !hasVisibleWindow {
-                NSApp.setActivationPolicy(.accessory)
-            }
+        if calendarService.canRequestAccess {
+            settingsWindowController.show()
         }
+        calendarService.start()
     }
 
     private func completeOnboarding() {

@@ -111,6 +111,16 @@ computes the identity from that keychain and exports it as `CODESIGN_IDENTITY` �
 bytes, and the appcast's EdDSA signature has to match what's actually uploaded. None of
 these secrets should ever appear in source, scripts, or commits.
 
+### Dev vs. production bundle identifier
+
+`Resources/Info.plist`'s `CFBundleIdentifier` (`com.rufushonour.headsup`) is the real,
+shipped identity. Local ad-hoc builds get remapped to `dev.rufushonour.headsup` by
+`build_app.sh` (see the `PlistBuddy` call right after the Info.plist copy) so local
+testing never shares — or resets — the real app's Calendar TCC grant, and so
+LaunchServices never ends up with two different builds fighting over the same identity
+(both of which happened repeatedly before this split existed). CI/release builds
+(`CODESIGN_IDENTITY` set) use the committed identifier as-is, unmodified.
+
 ## Toolchain note
 
 Built with Xcode 14.1 / Swift 5.7 (`swift-tools-version:5.7` in `Package.swift`), which
