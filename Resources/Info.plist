@@ -29,7 +29,7 @@
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>Heads Up</string>
+	<string>Copyright © 2026 Rufus Honour</string>
 	<key>SUFeedURL</key>
 	<string>https://raw.githubusercontent.com/rufushonour/headsup/main/appcast.xml</string>
 	<key>SUPublicEDKey</key>
