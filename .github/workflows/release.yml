@@ -89,7 +89,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           PLIST_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Resources/Info.plist)
+          NOTES_FILE="ReleaseNotes/${PLIST_VERSION}.md"
+          if [ -f "$NOTES_FILE" ]; then
+            NOTES_ARGS=(--notes-file "$NOTES_FILE")
+          else
+            echo "No $NOTES_FILE found, falling back to auto-generated notes." >&2
+            NOTES_ARGS=(--generate-notes)
+          fi
           gh release create "$GITHUB_REF_NAME" \
             "build/HeadsUp-${PLIST_VERSION}.dmg" \
             --title "$GITHUB_REF_NAME" \
-            --generate-notes
+            "${NOTES_ARGS[@]}"

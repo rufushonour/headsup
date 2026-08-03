@@ -1,6 +1,7 @@
 import SwiftUI
 import EventKit
 import Sparkle
+import ServiceManagement
 
 private let leadTimeOptions: [(title: String, seconds: TimeInterval)] = [
     ("At start time", 0),
@@ -26,6 +27,10 @@ struct SettingsView: View {
     // property access gives SwiftUI no way to notice — so this is re-synced in onAppear
     // rather than read live, otherwise the toggle can show a stale value.
     @State private var automaticallyChecksForUpdates = false
+    // SMAppService's registration status lives outside SwiftUI entirely (it's backed by
+    // launchd), so — same reasoning as automaticallyChecksForUpdates above — this is
+    // synced in onAppear rather than computed live from SMAppService.mainApp.status.
+    @State private var launchAtLogin = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -34,6 +39,17 @@ struct SettingsView: View {
             Divider()
 
             Form {
+                Section {
+                    Toggle(isOn: $launchAtLogin) {
+                        Label("Launch at login", systemImage: "power")
+                    }
+                    .onChange(of: launchAtLogin) { newValue in
+                        setLaunchAtLogin(newValue)
+                    }
+                } header: {
+                    Text("General")
+                }
+
                 Section {
                     Picker(selection: $calendarService.leadTime) {
                         ForEach(leadTimeOptions, id: \.seconds) { option in
@@ -101,6 +117,21 @@ struct SettingsView: View {
         .frame(width: 500, height: 520)
         .onAppear {
             automaticallyChecksForUpdates = updater.automaticallyChecksForUpdates
+            launchAtLogin = SMAppService.mainApp.status == .enabled
+        }
+    }
+
+    private func setLaunchAtLogin(_ enabled: Bool) {
+        do {
+            if enabled {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+        } catch {
+            // Reflect whatever actually happened rather than trusting the toggle click —
+            // e.g. registration can fail silently-to-us if launchd rejects it.
+            launchAtLogin = SMAppService.mainApp.status == .enabled
         }
     }
 

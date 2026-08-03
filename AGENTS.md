@@ -66,9 +66,18 @@ Don't add a test target speculatively — if you add real tests, wire them into
 
 ## Release pipeline — handle with care
 
-`Scripts/cut_release.sh <version>` bumps `Resources/Info.plist`, commits, pushes to
-`main`, and pushes a `vX.Y.Z` tag. The tag push triggers
-`.github/workflows/release.yml`, which:
+`Scripts/cut_release.sh <version> <notes-file>` bumps `Resources/Info.plist`, copies
+`notes-file` into `ReleaseNotes/<version>.md` (committed to the repo), commits, pushes to
+`main`, and pushes a `vX.Y.Z` tag. `notes-file` is a short markdown/plain-text changelog
+for that release — real users now update via Sparkle, so this is what they actually see:
+it becomes both the GitHub release body and the embedded Sparkle update-dialog text (via
+`--notes-file` / `generate_appcast`'s same-basename release-notes convention +
+`--embed-release-notes`, wired in `release.yml` / `release.sh` respectively). Write real
+content, not a placeholder — if `ReleaseNotes/<version>.md` is missing at tag time, the
+workflow falls back to GitHub's bare auto-generated notes (just a compare-URL, no
+description) and Sparkle's dialog shows nothing.
+
+The tag push triggers `.github/workflows/release.yml`, which:
 
 1. **Verifies the tag matches `Info.plist`'s `CFBundleShortVersionString`** and fails the
    build otherwise — if you edit the version, keep both in sync.

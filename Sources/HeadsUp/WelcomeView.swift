@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct WelcomeView: View {
-    let onContinue: () -> Void
+    let onContinue: (_ launchAtLogin: Bool) -> Void
+
+    @State private var launchAtLogin = true
 
     var body: some View {
         VStack(spacing: 28) {
@@ -26,6 +28,11 @@ struct WelcomeView: View {
 
             Spacer()
 
+            Toggle(isOn: $launchAtLogin) {
+                Label("Launch Heads Up at login", systemImage: "power")
+            }
+            .padding(.horizontal, 48)
+
             VStack(spacing: 12) {
                 Text("Next, macOS will ask for Calendar access — Heads Up needs this to know when your meetings start.")
                     .font(.caption)
@@ -33,7 +40,7 @@ struct WelcomeView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 48)
 
-                Button(action: onContinue) {
+                Button(action: { onContinue(launchAtLogin) }) {
                     Text("Get Started")
                         .font(.system(size: 15, weight: .semibold))
                         .frame(maxWidth: .infinity)

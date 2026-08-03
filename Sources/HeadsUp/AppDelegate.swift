@@ -1,5 +1,6 @@
 import AppKit
 import Sparkle
+import ServiceManagement
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
@@ -15,8 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         calendarService: calendarService,
         updater: updaterController.updater
     )
-    private lazy var welcomeWindowController = WelcomeWindowController(onContinue: { [weak self] in
-        self?.completeOnboarding()
+    private lazy var welcomeWindowController = WelcomeWindowController(onContinue: { [weak self] launchAtLogin in
+        self?.completeOnboarding(launchAtLogin: launchAtLogin)
     })
 
     private static let hasCompletedOnboardingKey = "hasCompletedOnboarding"
@@ -67,8 +68,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         calendarService.start()
     }
 
-    private func completeOnboarding() {
+    private func completeOnboarding(launchAtLogin: Bool) {
         UserDefaults.standard.set(true, forKey: Self.hasCompletedOnboardingKey)
+        if launchAtLogin {
+            try? SMAppService.mainApp.register()
+        }
         // Wait for the calendar access request to settle before swapping windows —
         // closing the Welcome window immediately can yank away the window the system
         // permission dialog needs to attach to, before it's had a chance to appear

@@ -3,7 +3,7 @@ import SwiftUI
 
 final class WelcomeWindowController: NSWindowController, NSWindowDelegate {
 
-    convenience init(onContinue: @escaping () -> Void) {
+    convenience init(onContinue: @escaping (_ launchAtLogin: Bool) -> Void) {
         let view = WelcomeView(onContinue: onContinue)
         let hosting = NSHostingController(rootView: view)
         let window = NSWindow(contentViewController: hosting)

@@ -45,15 +45,25 @@ mkdir -p "$STAGING_DIR"
 cp "$ROOT_DIR/build/$DMG_NAME" "$STAGING_DIR/"
 cp "$ROOT_DIR/appcast.xml" "$STAGING_DIR/appcast.xml"
 
+NOTES_FILE="$ROOT_DIR/ReleaseNotes/$VERSION.md"
+if [ -f "$NOTES_FILE" ]; then
+    # generate_appcast picks up release notes automatically from a file that shares the
+    # archive's basename (see its --help) — copying it in under that name is the whole
+    # integration; no separate flag needed to associate the two.
+    cp "$NOTES_FILE" "$STAGING_DIR/HeadsUp-${VERSION}.md"
+else
+    echo "No ReleaseNotes/$VERSION.md found — appcast entry will have no release notes." >&2
+fi
+
 DOWNLOAD_PREFIX="https://github.com/$REPO/releases/download/v${VERSION}/"
 
 echo "Generating signed appcast entry..."
 if [ -n "${SPARKLE_PRIVATE_KEY:-}" ]; then
     # CI path: key is supplied via a secret env var, piped straight in, never written to disk.
-    echo "$SPARKLE_PRIVATE_KEY" | "$GENERATE_APPCAST" --ed-key-file - --download-url-prefix "$DOWNLOAD_PREFIX" "$STAGING_DIR"
+    echo "$SPARKLE_PRIVATE_KEY" | "$GENERATE_APPCAST" --ed-key-file - --embed-release-notes --download-url-prefix "$DOWNLOAD_PREFIX" "$STAGING_DIR"
 else
     # Local path: key lives in this Mac's Keychain.
-    "$GENERATE_APPCAST" --download-url-prefix "$DOWNLOAD_PREFIX" "$STAGING_DIR"
+    "$GENERATE_APPCAST" --embed-release-notes --download-url-prefix "$DOWNLOAD_PREFIX" "$STAGING_DIR"
 fi
 
 cp "$STAGING_DIR/appcast.xml" "$ROOT_DIR/appcast.xml"
