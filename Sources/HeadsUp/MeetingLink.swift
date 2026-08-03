@@ -38,7 +38,7 @@ enum MeetingLinkExtractor {
         var candidates: [String] = []
 
         if let url = event.url {
-            candidates.append(url.absoluteString)
+            candidates.append(unwrapSafeLink(url.absoluteString))
         }
         if let location = event.location {
             candidates.append(contentsOf: extractURLs(from: location))
@@ -63,8 +63,29 @@ enum MeetingLinkExtractor {
         let matches = urlRegex.matches(in: text, options: [], range: range)
         return matches.compactMap { match in
             guard let r = Range(match.range, in: text) else { return nil }
-            return String(text[r]).trimmingCharacters(in: CharacterSet(charactersIn: ".,)"))
+            let raw = String(text[r]).trimmingCharacters(in: CharacterSet(charactersIn: ".,)"))
+            return unwrapSafeLink(raw)
         }
+    }
+
+    /// Microsoft Defender's Safe Links rewrites every URL in an Outlook/Exchange invite
+    /// into an `https://*.safelinks.protection.outlook.com/?url=<encoded original>&...`
+    /// wrapper — extremely common in Microsoft 365 orgs. Since the real destination is
+    /// then percent-encoded, it never matches `knownDomains` (host is safelinks.protection
+    /// .outlook.com, not e.g. teams.microsoft.com) and gets treated as just some
+    /// unrecognized URL, so the join link loses its "known domain" priority to whatever
+    /// happens to appear first in the invite body. Unwrap it back to the real URL so
+    /// domain matching (and the link we actually open) sees the true destination.
+    private static func unwrapSafeLink(_ urlString: String) -> String {
+        guard let url = URL(string: urlString),
+              let host = url.host?.lowercased(),
+              host.contains("safelinks.protection.outlook.com"),
+              let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let inner = components.queryItems?.first(where: { $0.name == "url" })?.value
+        else {
+            return urlString
+        }
+        return inner
     }
 
     private static func isKnownDomain(_ urlString: String) -> Bool {

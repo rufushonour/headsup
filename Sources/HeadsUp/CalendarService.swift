@@ -166,14 +166,15 @@ final class CalendarService: ObservableObject {
     }
 
     /// Re-arms a meeting so it fires again after `delay` (chosen on the alert itself,
-    /// defaulting to `snoozeDuration` but overridable per-snooze).
+    /// defaulting to `snoozeDuration` but overridable per-snooze). Deliberately leaves
+    /// `meeting.id` in `alertedEventKeys` for the whole delay — removing it up front used
+    /// to let the very next 15s poll() tick see the meeting as unalerted and immediately
+    /// re-fire it, defeating the snooze almost instantly regardless of the chosen delay.
     func snooze(_ meeting: UpcomingMeeting, for delay: TimeInterval) {
-        alertedEventKeys.remove(meeting.id)
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             guard let self else { return }
             guard Date() < meeting.endDate else { return }
             self.onMeetingDue?(meeting)
-            self.alertedEventKeys.insert(meeting.id)
         }
     }
 
