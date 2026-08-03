@@ -6,6 +6,15 @@
         <description>Updates to Heads Up.</description>
         <language>en</language>
         <item>
+            <title>0.5.3</title>
+            <pubDate>Mon, 03 Aug 2026 09:04:43 +0000</pubDate>
+            <sparkle:version>0.5.3</sparkle:version>
+            <sparkle:shortVersionString>0.5.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://github.com/rufushonour/headsup/releases/download/v0.5.3/HeadsUp-0.5.3.dmg" length="1900023" type="application/octet-stream" sparkle:edSignature="pPlYIpO2iQ3ArfAVipCQYEZ+NYBePQkz4LJ4ZFqy8+1v4Th8MlPm5PHz7acmo1F8F5i3djkj/DJmaDFV4zGkDg=="/>
+        </item>
+        <item>
             <title>0.5.2</title>
             <pubDate>Thu, 30 Jul 2026 13:45:34 +0000</pubDate>
             <sparkle:version>0.5.2</sparkle:version>
@@ -22,15 +31,6 @@
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <enclosure url="https://github.com/rufushonour/headsup/releases/download/v0.5.1/HeadsUp-0.5.1.dmg" length="1899452" type="application/octet-stream" sparkle:edSignature="AtTqIH0+Hz1wl7RXNU47Fyto0JrVbIaU5toF1h80yUjEZSoo5d838KZWOBA7qA+Lez9PUwqsDw2WB3ajRG7JDw=="/>
-        </item>
-        <item>
-            <title>0.5.0</title>
-            <pubDate>Thu, 30 Jul 2026 07:23:35 +0000</pubDate>
-            <sparkle:version>0.5.0</sparkle:version>
-            <sparkle:shortVersionString>0.5.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://github.com/rufushonour/headsup/releases/download/v0.5.0/HeadsUp-0.5.0.dmg" length="1897062" type="application/octet-stream" sparkle:edSignature="KwkN+3ZY8L90Zvi5++RzKniHNe5+0ogdXxw2gi+xergPMiqHo0ZcDCWjBicW9EjZEMxKfiD/IzkjSXvj4iB+Bg=="/>
         </item>
     </channel>
 </rss>
