@@ -6,6 +6,27 @@
         <description>Updates to Heads Up.</description>
         <language>en</language>
         <item>
+            <title>1.0.0</title>
+            <pubDate>Mon, 03 Aug 2026 10:14:23 +0000</pubDate>
+            <sparkle:version>1.0.0</sparkle:version>
+            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[First stable release. Heads Up puts a full-screen alert on every display right before your meetings start, so you actually see it — pulls from your calendars, finds the Zoom/Meet/Teams link automatically, and lets you snooze or join straight from the alert.
+
+What's new since 0.5.3:
+- Launch at login, offered on first run and adjustable anytime in Settings
+- Update notifications now show real release notes instead of a bare changelog link
+
+Recent fixes:
+- Snoozing an alert no longer reopens it within seconds — it now actually waits out the snooze duration you picked
+- Join links wrapped by Microsoft Defender Safe Links (common on Microsoft 365) now resolve to the real Zoom/Meet/Teams URL instead of falling back to the wrong link
+- Fixed Calendar access never prompting on notarized builds
+- Real copyright notice in the About panel
+]]></description>
+            <enclosure url="https://github.com/rufushonour/headsup/releases/download/v1.0.0/HeadsUp-1.0.0.dmg" length="1890960" type="application/octet-stream" sparkle:edSignature="l+EQm9kuT/ZdRUp75mYGh3KH/9iwDilYyTOtNzNAbg90RRT1krI3jUqW0Qa1roQUBUaPhYb2MPPQFrqZT79MDg=="/>
+        </item>
+        <item>
             <title>0.5.3</title>
             <pubDate>Mon, 03 Aug 2026 09:04:43 +0000</pubDate>
             <sparkle:version>0.5.3</sparkle:version>
@@ -22,15 +43,6 @@
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <enclosure url="https://github.com/rufushonour/headsup/releases/download/v0.5.2/HeadsUp-0.5.2.dmg" length="1898360" type="application/octet-stream" sparkle:edSignature="hNQlofOpMSho0TkJhFSpla/fFDY9qqOHRKGoM/z38G+CztDWlO65ZRA/05qAvxxNspnAtShFB+UETYLgNackDA=="/>
-        </item>
-        <item>
-            <title>0.5.1</title>
-            <pubDate>Thu, 30 Jul 2026 13:32:23 +0000</pubDate>
-            <sparkle:version>0.5.1</sparkle:version>
-            <sparkle:shortVersionString>0.5.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://github.com/rufushonour/headsup/releases/download/v0.5.1/HeadsUp-0.5.1.dmg" length="1899452" type="application/octet-stream" sparkle:edSignature="AtTqIH0+Hz1wl7RXNU47Fyto0JrVbIaU5toF1h80yUjEZSoo5d838KZWOBA7qA+Lez9PUwqsDw2WB3ajRG7JDw=="/>
         </item>
     </channel>
 </rss>
