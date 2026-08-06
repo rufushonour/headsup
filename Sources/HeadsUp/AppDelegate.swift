@@ -158,11 +158,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alertPresenter.present(
             meeting,
             defaultSnoozeSeconds: calendarService.snoozeDuration,
-            onJoin: {
+            onJoin: { meeting in
                 guard let url = meeting.joinURL else { return }
                 NSWorkspace.shared.open(url)
             },
-            onSnooze: { [weak self] seconds in
+            onSnooze: { [weak self] meeting, seconds in
                 self?.calendarService.snooze(meeting, for: seconds)
             },
             onDismiss: {}

@@ -8,9 +8,9 @@ private let snoozeOptions: [(title: String, seconds: TimeInterval)] = [
 ]
 
 struct AlertView: View {
-    let meeting: UpcomingMeeting
+    let meetings: [UpcomingMeeting]
     let defaultSnoozeSeconds: TimeInterval
-    let onJoin: () -> Void
+    let onJoin: (UpcomingMeeting) -> Void
     let onSnooze: (TimeInterval) -> Void
     let onDismiss: () -> Void
 
@@ -23,11 +23,17 @@ struct AlertView: View {
         snoozeOptions.first(where: { $0.seconds == defaultSnoozeSeconds })?.title ?? "\(Int(defaultSnoozeSeconds / 60)) min"
     }
 
+    // Meetings only get folded together when they're due around the same time (see
+    // AlertPresenter), so treating the group's span as [earliest start, latest end] gives
+    // a sensible single status line without favoring one meeting over another.
+    private var earliestStart: Date { meetings.map(\.startDate).min() ?? now }
+    private var latestEnd: Date { meetings.map(\.endDate).max() ?? now }
+
     private var statusText: String {
-        let secondsUntil = meeting.startDate.timeIntervalSince(now)
+        let secondsUntil = earliestStart.timeIntervalSince(now)
         if secondsUntil > 1 {
             return "Starts in \(Int(secondsUntil.rounded()))s"
-        } else if now < meeting.endDate {
+        } else if now < latestEnd {
             return "Starting now"
         } else {
             return "In progress"
@@ -62,21 +68,41 @@ struct AlertView: View {
                         .tracking(2)
                         .foregroundColor(Color(red: 0.98, green: 0.55, blue: 0.20))
 
-                    Text(meeting.title)
-                        .font(.system(size: 52, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(3)
-                        .padding(.horizontal, 80)
+                    if meetings.count == 1, let meeting = meetings.first {
+                        Text(meeting.title)
+                            .font(.system(size: 52, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(3)
+                            .padding(.horizontal, 80)
 
-                    Text(meeting.startDate, style: .time)
-                        .font(.system(size: 20))
-                        .foregroundColor(.white.opacity(0.55))
+                        Text(meeting.startDate, style: .time)
+                            .font(.system(size: 20))
+                            .foregroundColor(.white.opacity(0.55))
+                    } else {
+                        Text("\(meetings.count) Meetings")
+                            .font(.system(size: 52, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+
+                        Text(earliestStart, style: .time)
+                            .font(.system(size: 20))
+                            .foregroundColor(.white.opacity(0.55))
+
+                        ScrollView {
+                            VStack(spacing: 10) {
+                                ForEach(meetings) { meeting in
+                                    MeetingRow(meeting: meeting, onJoin: { onJoin(meeting) })
+                                }
+                            }
+                        }
+                        .frame(maxWidth: 560, maxHeight: 280)
+                        .padding(.top, 4)
+                    }
                 }
 
                 HStack(alignment: .top, spacing: 16) {
-                    if meeting.joinURL != nil {
-                        Button(action: onJoin) {
+                    if meetings.count == 1, let meeting = meetings.first, meeting.joinURL != nil {
+                        Button(action: { onJoin(meeting) }) {
                             Label("Join Meeting", systemImage: "video.fill")
                         }
                         .buttonStyle(AlertButtonStyle(background: Color(red: 0.20, green: 0.72, blue: 0.36), foreground: .white))
@@ -137,15 +163,55 @@ struct AlertView: View {
     }
 }
 
+private struct MeetingRow: View {
+    let meeting: UpcomingMeeting
+    let onJoin: () -> Void
+
+    var body: some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(meeting.title)
+                    .font(.system(size: 19, weight: .semibold))
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+                if meeting.joinURL == nil, let location = meeting.location, !location.isEmpty {
+                    Text(location)
+                        .font(.system(size: 13))
+                        .foregroundColor(.white.opacity(0.55))
+                }
+            }
+            Spacer(minLength: 12)
+            if meeting.joinURL != nil {
+                Button(action: onJoin) {
+                    Label("Join", systemImage: "video.fill")
+                }
+                .buttonStyle(AlertButtonStyle(
+                    background: Color(red: 0.20, green: 0.72, blue: 0.36),
+                    foreground: .white,
+                    fontSize: 14,
+                    horizontalPadding: 16,
+                    verticalPadding: 9
+                ))
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white.opacity(0.08)))
+    }
+}
+
 private struct AlertButtonStyle: ButtonStyle {
     let background: Color
     let foreground: Color
+    var fontSize: CGFloat = 17
+    var horizontalPadding: CGFloat = 26
+    var verticalPadding: CGFloat = 14
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 17, weight: .semibold))
-            .padding(.horizontal, 26)
-            .padding(.vertical, 14)
+            .font(.system(size: fontSize, weight: .semibold))
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
             .foregroundColor(foreground)
             .background(
                 Capsule().fill(background.opacity(configuration.isPressed ? 0.7 : 1))
