@@ -177,6 +177,12 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         settings.target = self
         menu.addItem(settings)
 
+        if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+            let versionItem = NSMenuItem(title: "Version \(version)", action: nil, keyEquivalent: "")
+            versionItem.isEnabled = false
+            menu.addItem(versionItem)
+        }
+
         let checkForUpdates = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
         checkForUpdates.target = self
         menu.addItem(checkForUpdates)
