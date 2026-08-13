@@ -6,6 +6,21 @@
         <description>Updates to Heads Up.</description>
         <language>en</language>
         <item>
+            <title>1.2.0</title>
+            <pubDate>Thu, 13 Aug 2026 15:27:38 +0000</pubDate>
+            <sparkle:version>1.2.0</sparkle:version>
+            <sparkle:shortVersionString>1.2.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[The full-screen alert can no longer get stuck. Press Esc to dismiss it, or Return to join when there's a single meeting to join.
+
+Connecting or disconnecting a display while an alert is up now works properly too — the alert redraws itself for the displays you actually have. Previously, unplugging a screen could leave the alert stranded with its buttons off-screen, and because it covers the menu bar there was no way to close it short of force-quitting.
+
+The tray menu now also shows which version you're running, just above Check for Updates.
+]]></description>
+            <enclosure url="https://github.com/rufushonour/headsup/releases/download/v1.2.0/HeadsUp-1.2.0.dmg" length="1900209" type="application/octet-stream" sparkle:edSignature="CmHmDuKIFkjCtnjrNYO3XpKDr3wcA73AznhlfoAciISstIb/ybK5A1DNYBGIg87HIN1b6EeJxR9dRC7NEXblBA=="/>
+        </item>
+        <item>
             <title>1.1.0</title>
             <pubDate>Thu, 06 Aug 2026 08:22:58 +0000</pubDate>
             <sparkle:version>1.1.0</sparkle:version>
@@ -36,15 +51,6 @@ Recent fixes:
 - Real copyright notice in the About panel
 ]]></description>
             <enclosure url="https://github.com/rufushonour/headsup/releases/download/v1.0.0/HeadsUp-1.0.0.dmg" length="1890960" type="application/octet-stream" sparkle:edSignature="l+EQm9kuT/ZdRUp75mYGh3KH/9iwDilYyTOtNzNAbg90RRT1krI3jUqW0Qa1roQUBUaPhYb2MPPQFrqZT79MDg=="/>
-        </item>
-        <item>
-            <title>0.5.3</title>
-            <pubDate>Mon, 03 Aug 2026 09:04:43 +0000</pubDate>
-            <sparkle:version>0.5.3</sparkle:version>
-            <sparkle:shortVersionString>0.5.3</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://github.com/rufushonour/headsup/releases/download/v0.5.3/HeadsUp-0.5.3.dmg" length="1900023" type="application/octet-stream" sparkle:edSignature="pPlYIpO2iQ3ArfAVipCQYEZ+NYBePQkz4LJ4ZFqy8+1v4Th8MlPm5PHz7acmo1F8F5i3djkj/DJmaDFV4zGkDg=="/>
         </item>
     </channel>
 </rss>
