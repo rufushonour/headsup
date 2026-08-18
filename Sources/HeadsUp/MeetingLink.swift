@@ -1,12 +1,13 @@
 import Foundation
 import EventKit
 
-/// Finds a video-conferencing join URL for a calendar event by checking, in order,
-/// the event's own `url` field, then its location, then its notes.
+/// Finds a video-conferencing join URL for a calendar event by collecting the URLs in the
+/// event's own `url` field, its location, and its notes, then picking the one that looks
+/// most like an actual "join the meeting" link.
 enum MeetingLinkExtractor {
 
-    /// Domains treated as known conferencing providers, checked first so a Zoom/Meet/Teams
-    /// link is preferred over some unrelated URL that happens to appear in the notes.
+    /// Domains treated as known conferencing providers, so a Zoom/Meet/Teams link is
+    /// preferred over some unrelated URL that happens to appear in the notes.
     private static let knownDomains = [
         "zoom.us", "zoomgov.com",
         "meet.google.com",
@@ -23,16 +24,51 @@ enum MeetingLinkExtractor {
         "8x8.vc",
         "join.me",
         "app.livestorm.co",
-        "vonage.com",
-        "loom.com/meet",
         "around.co",
         "slack.com/huddle"
     ]
 
-    private static let urlRegex = try! NSRegularExpression(
-        pattern: #"https?://[^\s<>()"]+"#,
-        options: []
-    )
+    /// URL shapes that identify the actual join link, as opposed to some other page on the
+    /// same conferencing domain.
+    private static let joinPathHints = [
+        "/l/meetup-join/",  // Teams
+        "/meetup-join",     // Teams, without the /l/ prefix
+        "/l/meeting/",      // Teams, older invite format
+        "/meet/",           // teams.live.com, Webex personal rooms, RingCentral
+        "/j/",              // Zoom
+        "/w/",              // Zoom webinars
+        "/my/",             // Zoom personal meeting rooms
+        "/wc/join/",        // Zoom web client
+        "/j.php",           // Webex
+        "/join"             // Whereby, GoToMeeting, join.me
+    ]
+
+    /// Pages that live on conferencing domains but are never the join link. Teams invites
+    /// in particular ship a block of these alongside the real one.
+    private static let nonJoinPathHints = [
+        "meetingoptions",   // Teams "Meeting options"
+        "dialin.",          // Teams dial-in numbers / PIN reset
+        "/l/channel/",      // a Teams channel, not a meeting
+        "/l/chat/",         // a Teams chat
+        "/l/team/",         // a Teams team
+        "/l/app/",          // a Teams app page
+        "/download"         // "get the app" links on any provider
+    ]
+
+    /// How much a URL looks like the join link. Ordered worst to best, so `rank` values
+    /// can be compared directly.
+    private enum Rank: Int, Comparable {
+        /// On a conferencing domain, but a page known not to be joinable.
+        case knownNonJoinPage
+        /// Some other URL entirely — could still be an unrecognized provider.
+        case unrecognized
+        /// A conferencing domain with nothing more specific to go on.
+        case conferencingDomain
+        /// A conferencing domain *and* a join-shaped URL.
+        case joinLink
+
+        static func < (lhs: Rank, rhs: Rank) -> Bool { lhs.rawValue < rhs.rawValue }
+    }
 
     static func link(for event: EKEvent) -> URL? {
         var candidates: [String] = []
@@ -47,18 +83,48 @@ enum MeetingLinkExtractor {
             candidates.append(contentsOf: extractURLs(from: notes))
         }
 
-        // Prefer a known conferencing domain if one is present.
-        if let known = candidates.first(where: { isKnownDomain($0) }) {
-            return URL(string: known)
-        }
-        // Otherwise fall back to the first URL found (e.g. event.url itself).
-        if let first = candidates.first {
-            return URL(string: first)
-        }
-        return nil
+        return bestLink(from: candidates)
     }
 
-    private static func extractURLs(from text: String) -> [String] {
+    /// Picks the likeliest join link out of `candidates`.
+    ///
+    /// Document order alone isn't enough to go on, which is what this used to rely on: a
+    /// Teams invite body carries several teams.microsoft.com URLs — "Meeting options",
+    /// dial-in, the Teams app — and any of them can appear *before* the real meetup-join
+    /// URL, so taking the first one on a known conferencing domain opened the wrong page.
+    /// Rank by how much each URL looks like a join link instead, and only fall back to
+    /// document order to break ties.
+    static func bestLink(from candidates: [String]) -> URL? {
+        var best: (rank: Rank, urlString: String)?
+        for candidate in candidates {
+            let rank = rank(of: candidate)
+            // Strictly greater, so the earliest candidate wins among equals.
+            if best == nil || rank > best!.rank {
+                best = (rank, candidate)
+            }
+        }
+        return best.flatMap { URL(string: $0.urlString) }
+    }
+
+    private static func rank(of urlString: String) -> Rank {
+        guard let url = URL(string: urlString), let host = url.host?.lowercased() else {
+            return .unrecognized
+        }
+        guard knownDomains.contains(where: { host.contains($0) }) else {
+            return .unrecognized
+        }
+
+        // Match against host + path + query together: the distinguishing part sits in the
+        // path for Teams/Zoom ("/l/meetup-join/", "/j/") but in the host for Teams dial-in
+        // ("dialin.teams.microsoft.com") and in the query for Webex ("/j.php?MTID=").
+        let haystack = (host + url.path + "?" + (url.query ?? "")).lowercased()
+        if nonJoinPathHints.contains(where: { haystack.contains($0) }) {
+            return .knownNonJoinPage
+        }
+        return joinPathHints.contains(where: { haystack.contains($0) }) ? .joinLink : .conferencingDomain
+    }
+
+    static func extractURLs(from text: String) -> [String] {
         let range = NSRange(text.startIndex..., in: text)
         let matches = urlRegex.matches(in: text, options: [], range: range)
         return matches.compactMap { match in
@@ -67,6 +133,11 @@ enum MeetingLinkExtractor {
             return unwrapSafeLink(raw)
         }
     }
+
+    private static let urlRegex = try! NSRegularExpression(
+        pattern: #"https?://[^\s<>()"]+"#,
+        options: []
+    )
 
     /// Microsoft Defender's Safe Links rewrites every URL in an Outlook/Exchange invite
     /// into an `https://*.safelinks.protection.outlook.com/?url=<encoded original>&...`
@@ -86,10 +157,5 @@ enum MeetingLinkExtractor {
             return urlString
         }
         return inner
-    }
-
-    private static func isKnownDomain(_ urlString: String) -> Bool {
-        guard let url = URL(string: urlString), let host = url.host?.lowercased() else { return false }
-        return knownDomains.contains { host.contains($0) }
     }
 }
